@@ -5,6 +5,7 @@ const Owner = artifacts.require("Owner");
 var brokerAddress;
 var NCAddress;
 
+
 contract('Broker', (accounts) => {
   it('should deployed properly', async () => {
     const brokerInstance = await Broker.deployed();
