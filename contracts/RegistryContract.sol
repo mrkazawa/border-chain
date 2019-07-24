@@ -17,19 +17,33 @@ contract RegistryContract {
     Device[] devices;
     mapping (address => Device[]) trustedGateways;
 
+    event NewPayloadAdded(address sender, bytes32 IPFSHash);
+
     constructor() public {
 		owner = msg.sender;
 	}
 
-    modifier payloadMustExist(bytes32 IPFShash) {
-        require(payloads[IPFShash].isValue, "payload must exist");
+    modifier payloadMustExist(bytes32 IPFSHash) {
+        require(payloads[IPFSHash].isValue, "payload must exist");
         _;
     }
 
-    function storeAuthNPayload(bytes32 IPFShash, address target, address verifier) public {
-        Payload storage p = payloads[IPFShash];
-        p.target = target;
+    modifier payloadMustNotExist(bytes32 IPFSHash) {
+        require(!payloads[IPFSHash].isValue, "payload must not exist");
+        _;
+    }
+
+    function storeAuthNPayload(bytes32 IPFSHash, address verifier) public payloadMustNotExist(IPFSHash) {
+        Payload storage p = payloads[IPFSHash];
+        p.target = msg.sender;
         p.verifier = verifier;
+        p.isValue = true;
+
+        emit NewPayloadAdded(msg.sender, IPFSHash);
+    }
+
+    function isPayloadExistForVerifier(bytes32 IPFSHash) public view payloadMustExist(IPFSHash) returns(bool) {
+        return (payloads[IPFSHash].verifier == msg.sender);
     }
 
     // check if given address is trusted gateway
