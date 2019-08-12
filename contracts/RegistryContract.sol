@@ -8,6 +8,7 @@ contract RegistryContract {
 	}
 
     address public owner;
+    // key: IPFS hash, value: Payload struct
     mapping (bytes32 => Payload) payloads;
     // key: gateway address, value: true if trusted
     mapping (address => bool) trustedGateways;
@@ -16,6 +17,7 @@ contract RegistryContract {
 
     event NewPayloadAdded(address sender, bytes32 IPFSHash);
     event GatewayVerified(address sender, address gateway);
+    event DeviceVerified(address sender, address gateway, address device);
 
     constructor() public {
 		owner = msg.sender;
@@ -37,6 +39,11 @@ contract RegistryContract {
         _;
     }
 
+    modifier gatewayMustTrusted(address gateway) {
+        require(trustedGateways[gateway] == true, "gateway must be trusted first");
+        _;
+    }
+
     function storeAuthNPayload(bytes32 IPFSHash, address target, address verifier) public
     payloadMustNotExist(IPFSHash) {
         Payload storage p = payloads[IPFSHash];
@@ -53,6 +60,15 @@ contract RegistryContract {
         trustedGateways[gateway] = true;
 
         emit GatewayVerified(msg.sender, gateway);
+    }
+
+    function verifyAuthNDevice(bytes32 IPFSHash, address gateway, address device) public
+    payloadMustExist(IPFSHash)
+    verifierAndTargetMustExist(IPFSHash, device)
+    gatewayMustTrusted(gateway) {
+        trustedDevices[device] = gateway;
+
+        emit DeviceVerified(msg.sender, gateway, device);
     }
 
     function isTrustedGateway(address gateway) public view
