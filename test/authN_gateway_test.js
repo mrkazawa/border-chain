@@ -24,20 +24,20 @@ contract('Integration test for Gateway Authentication', (accounts) => {
     ICAddress = IC.address;
   });
 
-  it('should store the hash of the payload', async () => {
+  it('Domain owner can store the hash of the payload', async () => {
     let tx = await RC.storeAuthNPayload(gatewayHashInBytes, GCAccount, ICAddress, { from: domainOwner });
 
     truffleAssert.eventEmitted(tx, 'NewPayloadAdded', { sender: domainOwner, IPFSHash: gatewayHashInBytes });
   });
 
-  it('should NOT store the same payload hash', async () => {
+  it('Domain owner can NOT store the same payload hash', async () => {
     // mistakenly store the same authentication payload hash
     await truffleAssert.reverts(
       RC.storeAuthNPayload(gatewayHashInBytes, observer, ICAddress, { from: domainOwner }), 'payload must not exist'
     );
   });
 
-  it('should NOT verify the GATEWAY due to invalid HASH', async () => {
+  it('ISP can NOT verify the GATEWAY due to invalid HASH', async () => {
     let status = await RC.isTrustedGateway(GCAccount, { from: observer });
     assert.equal(status, false, "gateway address is NOT in the trusted list");
 
@@ -48,7 +48,7 @@ contract('Integration test for Gateway Authentication', (accounts) => {
     );
   });
 
-  it('should NOT verify the GATEWAY due to invalid TARGET', async () => {
+  it('ISP can NOT verify the GATEWAY due to invalid TARGET', async () => {
     let status = await RC.isTrustedGateway(GCAccount, { from: observer });
     assert.equal(status, false, "gateway address is NOT in the trusted list");
 
@@ -57,7 +57,7 @@ contract('Integration test for Gateway Authentication', (accounts) => {
     );
   });
 
-  it('should NOT verify the GATEWAY due to invalid VERIFIER', async () => {
+  it('ISP can NOT verify the GATEWAY due to invalid VERIFIER (fake IC)', async () => {
     let status = await RC.isTrustedGateway(GCAccount, { from: observer });
     assert.equal(status, false, "gateway address is NOT in the trusted list");
 
@@ -67,7 +67,7 @@ contract('Integration test for Gateway Authentication', (accounts) => {
     );
   });
 
-  it('should NOT verify the GATEWAY due to invalid contract OWNER', async () => {
+  it('ISP can NOT verify the GATEWAY due to invalid contract OWNER (anonymous IC invocation)', async () => {
     let status = await RC.isTrustedGateway(GCAccount, { from: observer });
     assert.equal(status, false, "gateway address is NOT in the trusted list");
 
@@ -76,7 +76,7 @@ contract('Integration test for Gateway Authentication', (accounts) => {
     );
   });
 
-  it('should verify the GATEWAY correctly', async () => {
+  it('ISP can verify the GATEWAY correctly', async () => {
     let status = await RC.isTrustedGateway(GCAccount, { from: observer });
     assert.equal(status, false, "gateway address is NOT in the trusted list");
 
