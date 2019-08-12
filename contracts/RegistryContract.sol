@@ -7,17 +7,15 @@ contract RegistryContract {
         bool isValue;
 	}
 
-    struct Device {
-        address devicesAddr;
-        bool isValue;
-    }
-
     address public owner;
     mapping (bytes32 => Payload) payloads;
-    Device[] devices;
-    mapping (address => Device[]) trustedGateways;
+    // key: gateway address, value: true if trusted
+    mapping (address => bool) trustedGateways;
+    // key: device address, value: current gateway address
+    mapping (address => address) trustedDevices;
 
     event NewPayloadAdded(address sender, bytes32 IPFSHash);
+    event GatewayVerified(address sender, address gateway);
 
     constructor() public {
 		owner = msg.sender;
@@ -33,27 +31,40 @@ contract RegistryContract {
         _;
     }
 
-    function storeAuthNPayload(bytes32 IPFSHash, address verifier) public payloadMustNotExist(IPFSHash) {
+    modifier verifierAndTargetMustExist(bytes32 IPFSHash, address target) {
+        require(payloads[IPFSHash].verifier == msg.sender, "only for valid verifier");
+        require(payloads[IPFSHash].target == target, "must verify correct target");
+        _;
+    }
+
+    function storeAuthNPayload(bytes32 IPFSHash, address target, address verifier) public
+    payloadMustNotExist(IPFSHash) {
         Payload storage p = payloads[IPFSHash];
-        p.target = msg.sender;
+        p.target = target;
         p.verifier = verifier;
         p.isValue = true;
 
         emit NewPayloadAdded(msg.sender, IPFSHash);
     }
 
-    function isPayloadExistForVerifier(bytes32 IPFSHash) public view payloadMustExist(IPFSHash) returns(bool) {
-        return (payloads[IPFSHash].verifier == msg.sender);
+    function verifyAuthNGateway(bytes32 IPFSHash, address gateway) public
+    payloadMustExist(IPFSHash)
+    verifierAndTargetMustExist(IPFSHash, gateway) {
+        trustedGateways[gateway] = true;
+
+        emit GatewayVerified(msg.sender, gateway);
     }
 
-    // check if given address is trusted gateway
-    // check if given address is trusted device
+    function isTrustedGateway(address gateway) public view
+    returns (bool) {
+        return (trustedGateways[gateway] == true);
+    }
+
+    function isTrustedDevice(address device) public view
+    returns (bool) {
+        return (trustedGateways[trustedDevices[device]] == true);
+    }
 
     // TODO: delete trusted gateway, use below code
     // delete trustedGateways[address];
-
-    function getValue(uint initial) public returns(uint) {
-        return initial + 150;
-    }
-
 }
