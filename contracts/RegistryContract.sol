@@ -33,8 +33,12 @@ contract RegistryContract {
         _;
     }
 
-    modifier verifierAndTargetMustExist(bytes32 IPFSHash, address target) {
+    modifier onlyForVerifier(bytes32 IPFSHash) {
         require(payloads[IPFSHash].verifier == msg.sender, "only for valid verifier");
+        _;
+    }
+
+    modifier targetMustExist(bytes32 IPFSHash, address target) {
         require(payloads[IPFSHash].target == target, "must verify correct target");
         _;
     }
@@ -44,7 +48,7 @@ contract RegistryContract {
         _;
     }
 
-    function storeAuthNPayload(bytes32 IPFSHash, address target, address verifier) public
+    function storeAuthNPayload(bytes32 IPFSHash, address target, address verifier) external
     payloadMustNotExist(IPFSHash) {
         Payload storage p = payloads[IPFSHash];
         p.target = target;
@@ -54,29 +58,38 @@ contract RegistryContract {
         emit NewPayloadAdded(msg.sender, IPFSHash);
     }
 
-    function verifyAuthNGateway(bytes32 IPFSHash, address gateway) public
+    function verifyAuthNGateway(bytes32 IPFSHash, address gateway) external
     payloadMustExist(IPFSHash)
-    verifierAndTargetMustExist(IPFSHash, gateway) {
+    onlyForVerifier(IPFSHash)
+    targetMustExist(IPFSHash, gateway) {
         trustedGateways[gateway] = true;
 
         emit GatewayVerified(msg.sender, gateway);
     }
 
-    function verifyAuthNDevice(bytes32 IPFSHash, address gateway, address device) public
+    function verifyAuthNDevice(bytes32 IPFSHash, address gateway, address device) external
     payloadMustExist(IPFSHash)
-    verifierAndTargetMustExist(IPFSHash, device)
+    onlyForVerifier(IPFSHash)
+    targetMustExist(IPFSHash, gateway)
     gatewayMustTrusted(gateway) {
         trustedDevices[device] = gateway;
 
         emit DeviceVerified(msg.sender, gateway, device);
     }
 
-    function isTrustedGateway(address gateway) public view
+    function isValidPayloadForVerifier(bytes32 IPFSHash) external view
+    payloadMustExist(IPFSHash)
+    onlyForVerifier(IPFSHash)
+    returns (bool) {
+        return true;
+    }
+
+    function isTrustedGateway(address gateway) external view
     returns (bool) {
         return (trustedGateways[gateway] == true);
     }
 
-    function isTrustedDevice(address device) public view
+    function isTrustedDevice(address device) external view
     returns (bool) {
         return (trustedGateways[trustedDevices[device]] == true);
     }

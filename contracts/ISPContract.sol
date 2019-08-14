@@ -8,7 +8,7 @@ contract ISPContract {
 	}
 
     modifier onlyOwner() {
-        require(msg.sender == owner, 'only for owner');
+        require(msg.sender == owner, 'only for ISPContract owner');
         _;
     }
 
@@ -17,8 +17,16 @@ contract ISPContract {
         RegistryContract RC = RegistryContract(contractAddress);
         RC.verifyAuthNGateway(IPFSHash, gateway);
     }
+
+    function isPayloadValid(address contractAddress, bytes32 IPFSHash) public view
+    onlyOwner()
+    returns (bool) {
+        RegistryContract RC = RegistryContract(contractAddress);
+        return RC.isValidPayloadForVerifier(IPFSHash);
+    }
 }
 
 interface RegistryContract {
    function verifyAuthNGateway(bytes32 IPFSHash, address gateway) external;
+   function isValidPayloadForVerifier(bytes32 IPFSHash) external view returns (bool);
 }

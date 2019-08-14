@@ -30,67 +30,19 @@ contract('Unit tests for Registry Contract', (accounts) => {
     assert.equal(RCOwner, owner, "truffle assign the first account as contract deployer by default");
   });
 
-  it('should store the hash of the payload properly', async () => {
+  //-------------------------------- Event Checker --------------------------------//
+
+  it('should emit NewPayloadAdded event', async () => {
     // store authentication payload hash for GC to be verified by IC
     let tx = await RC.storeAuthNPayload(gatewayHashInBytes, GCAddress, ICAddress, { from: domainOwner });
-
     truffleAssert.eventEmitted(tx, 'NewPayloadAdded', { sender: domainOwner, IPFSHash: gatewayHashInBytes });
   });
 
-  it('should NOT store the same payload hash', async () => {
-    // store authentication payload hash from GC to be verified by NC
+  it('should emit GatewayVerified event', async () => {
     await RC.storeAuthNPayload(gatewayHashInBytes, GCAddress, ICAddress, { from: domainOwner });
-    // mistakenly store the authentication same payload hash from GC to be verified by VC
-    await truffleAssert.reverts(
-      RC.storeAuthNPayload(gatewayHashInBytes, accounts[4], VCAddress, { from: domainOwner }), 'payload must not exist'
-    );
-  });
-
-  //-------------------------------- GATEWAY AUTHN --------------------------------//
-
-  it('should verify the GATEWAY correctly', async () => {
-    let status = await RC.isTrustedGateway(GCAddress, { from: observer });
-    assert.equal(status, false, "gateway address is NOT in the trusted list");
-
-    await RC.storeAuthNPayload(gatewayHashInBytes, GCAddress, ICAddress, { from: domainOwner });
+    // ICAddress verify GCAddress from the gatewayHashInBytes payload
     let tx = await RC.verifyAuthNGateway(gatewayHashInBytes, GCAddress, { from: ICAddress });
     truffleAssert.eventEmitted(tx, 'GatewayVerified', { sender: ICAddress, gateway: GCAddress });
-
-    status = await RC.isTrustedGateway(GCAddress, { from: observer });
-    assert.equal(status, true, "gateway address has been put into the trusted list");
-  });
-
-  it('should NOT verify the GATEWAY due to invalid HASH', async () => {
-    let status = await RC.isTrustedGateway(GCAddress, { from: observer });
-    assert.equal(status, false, "gateway address is NOT in the trusted list");
-
-    await RC.storeAuthNPayload(gatewayHashInBytes, GCAddress, ICAddress, { from: domainOwner });
-
-    const fakeHash = 'QmNSUYVKDSvPUnRLKmuxk9diJ6yS96r1TrAXzjTiBcFAKE';
-    let fakeHashBytes = ipfsTools.getBytes32FromIpfsHash(fakeHash);
-    await truffleAssert.reverts(
-      RC.verifyAuthNGateway(fakeHashBytes, GCAddress, { from: ICAddress }), 'payload must exist'
-    );
-  });
-
-  it('should NOT verify the GATEWAY due to invalid VERIFIER', async () => {
-    let status = await RC.isTrustedGateway(GCAddress, { from: observer });
-    assert.equal(status, false, "gateway address is NOT in the trusted list");
-
-    await RC.storeAuthNPayload(gatewayHashInBytes, GCAddress, ICAddress, { from: domainOwner });
-    await truffleAssert.reverts(
-      RC.verifyAuthNGateway(gatewayHashInBytes, GCAddress, { from: observer }), 'only for valid verifier'
-    );
-  });
-
-  it('should NOT verify the GATEWAY due to invalid TARGET', async () => {
-    let status = await RC.isTrustedGateway(GCAddress, { from: observer });
-    assert.equal(status, false, "gateway address is NOT in the trusted list");
-
-    await RC.storeAuthNPayload(gatewayHashInBytes, GCAddress, ICAddress, { from: domainOwner });
-    await truffleAssert.reverts(
-      RC.verifyAuthNGateway(gatewayHashInBytes, observer, { from: ICAddress }), 'must verify correct target'
-    );
   });
 
   //-------------------------------- DEVICE AUTHN --------------------------------//
