@@ -1,5 +1,4 @@
 const RegistryContract = artifacts.require("RegistryContract");
-const ISPContract = artifacts.require("ISPContract");
 const truffleAssert = require('truffle-assertions');
 const ipfsTools = require('./ipfs_tools');
 
