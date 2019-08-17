@@ -12,7 +12,7 @@ contract RegistryContract {
     mapping (bytes32 => Payload) payloads;
     // key: gateway address, value: true if trusted
     mapping (address => bool) trustedGateways;
-    // key: device address, value: current gateway address
+    // key: device address, value: current list of gateway address
     mapping (address => address) trustedDevices;
 
     event NewPayloadAdded(address sender, bytes32 IPFSHash);
@@ -70,7 +70,7 @@ contract RegistryContract {
     function verifyAuthNDevice(bytes32 IPFSHash, address gateway, address device) external
     payloadMustExist(IPFSHash)
     onlyForVerifier(IPFSHash)
-    targetMustExist(IPFSHash, gateway)
+    targetMustExist(IPFSHash, device)
     gatewayMustTrusted(gateway) {
         trustedDevices[device] = gateway;
 
@@ -78,10 +78,11 @@ contract RegistryContract {
     }
 
     function isValidPayloadForVerifier(bytes32 IPFSHash) external view
-    payloadMustExist(IPFSHash)
-    onlyForVerifier(IPFSHash)
     returns (bool) {
-        return true;
+        if (payloads[IPFSHash].isValue && payloads[IPFSHash].verifier == msg.sender) {
+            return true;
+        }
+        return false;
     }
 
     function isTrustedGateway(address gateway) external view

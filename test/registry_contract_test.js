@@ -14,7 +14,6 @@ contract('Unit tests for Registry Contract', (accounts) => {
   const ICAddress = accounts[3];
   const domainOwner = accounts[6];
   const device = accounts[7];
-  const observer = accounts[9];
 
   const gatewayHashInBytes = ipfsTools.getBytes32FromIpfsHash(gatewayHash);
   const deviceHashInBytes = ipfsTools.getBytes32FromIpfsHash(deviceHash);
@@ -35,6 +34,7 @@ contract('Unit tests for Registry Contract', (accounts) => {
   it('should emit NewPayloadAdded event', async () => {
     // store authentication payload hash for GC to be verified by IC
     let tx = await RC.storeAuthNPayload(gatewayHashInBytes, GCAddress, ICAddress, { from: domainOwner });
+
     truffleAssert.eventEmitted(tx, 'NewPayloadAdded', { sender: domainOwner, IPFSHash: gatewayHashInBytes });
   });
 
@@ -42,27 +42,18 @@ contract('Unit tests for Registry Contract', (accounts) => {
     await RC.storeAuthNPayload(gatewayHashInBytes, GCAddress, ICAddress, { from: domainOwner });
     // ICAddress verify GCAddress from the gatewayHashInBytes payload
     let tx = await RC.verifyAuthNGateway(gatewayHashInBytes, GCAddress, { from: ICAddress });
+
     truffleAssert.eventEmitted(tx, 'GatewayVerified', { sender: ICAddress, gateway: GCAddress });
   });
 
-  //-------------------------------- DEVICE AUTHN --------------------------------//
+  it('should emit DeviceVerified event', async () => {
+    await RC.storeAuthNPayload(gatewayHashInBytes, GCAddress, ICAddress, { from: domainOwner });
+    // ICAddress verify GCAddress from the gatewayHashInBytes payload
+    await RC.verifyAuthNGateway(gatewayHashInBytes, GCAddress, { from: ICAddress });
+    await RC.storeAuthNPayload(deviceHashInBytes, device, VCAddress, { from: GCAddress });
+    // VCAddress verify device from the deviceHashInBytes payload
+    let tx = await RC.verifyAuthNDevice(deviceHashInBytes, GCAddress, device, { from: VCAddress });
 
-  /*
-  it('should verify the DEVICE correctly', async () => {
-    let RCInstance = await RC.new();
-    let IPFSHashInBytes = ipfsTools.getBytes32FromIpfsHash(IPFSHash);
-
-    let status = await RCInstance.isTrustedDevice(device, { from: observer });
-    assert.equal(status, false, "device address is NOT in the trusted list");
-
-    await RCInstance.storeAuthNPayload(IPFSHashInBytes, GCAccount, NCAccount, { from: domainOwner });
-    await RCInstance.verifyAuthNGateway(IPFSHashInBytes, GCAccount, { from: NCAccount });
-
-    let deviceHashInBytes = ipfsTools.getBytes32FromIpfsHash(deviceHash);
-    await RCInstance.storeAuthNPayload(deviceHashInBytes, device, VCAccount, { from: GCAccount });
-    await RCInstance.verifyAuthNGateway(deviceHashInBytes, device, { from: VCAccount });
-
-    status = await RCInstance.isTrustedGateway(GCAccount, { from: observer });
-    assert.equal(status, true, "gateway address has been put into the trusted list");
-  });*/
+    truffleAssert.eventEmitted(tx, 'DeviceVerified', { sender: VCAddress, gateway: GCAddress, device: device });
+  });
 });
