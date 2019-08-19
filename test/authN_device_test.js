@@ -69,7 +69,7 @@ contract('Device Authentication Test Scenarios', (accounts) => {
     assert.equal(valid, false, "there is no such payload for observer");
   });
 
-  //----------------------- Validating Payload -----------------------//
+  //----------------------- Validating Device -----------------------//
 
   it('VENDOR can NOT verify the DEVICE due to invalid HASH', async () => {
     await RC.storeAuthNPayload(gatewayHashInBytes, GC, ISP, { from: domainOwner });
@@ -127,5 +127,60 @@ contract('Device Authentication Test Scenarios', (accounts) => {
 
     status = await RC.isTrustedDevice(device, { from: observer });
     assert.equal(status, true, "device address has been put into the trusted list");
+  });
+
+  //----------------------- Revoking Device -----------------------//
+
+  it('GATEWAY can NOT revoke the DEVICE due to invalid PAYLOAD (not exist)', async () => {
+    await RC.storeAuthNPayload(gatewayHashInBytes, GC, ISP, { from: domainOwner });
+    await RC.verifyAuthNGateway(gatewayHashInBytes, GC, { from: ISP });
+    await RC.storeAuthNPayload(deviceHashInBytes, device, vendor, { from: GC });
+    await RC.verifyAuthNDevice(deviceHashInBytes, GC, device, { from: vendor });
+    // generate fake payload
+    const fakeHash = 'QmNSUYVKDSvPUnRLKmuxk9diJ6yS96r1TrAXzjTiBcFAKE';
+    let fakeHashBytes = ipfsTools.getBytes32FromIpfsHash(fakeHash);
+    // this payload does not exist
+    await truffleAssert.reverts(
+      RC.deleteTrustedDevice(fakeHashBytes, device, { from: GC }), 'payload must exist'
+    );
+  });
+
+  it('GATEWAY can NOT revoke the DEVICE due to invalid SOURCE', async () => {
+    await RC.storeAuthNPayload(gatewayHashInBytes, GC, ISP, { from: domainOwner });
+    await RC.verifyAuthNGateway(gatewayHashInBytes, GC, { from: ISP });
+    await RC.storeAuthNPayload(deviceHashInBytes, device, vendor, { from: GC });
+    await RC.verifyAuthNDevice(deviceHashInBytes, GC, device, { from: vendor });
+
+    // GC is the one who requests device authentication, therefore only him can revoke
+    await truffleAssert.reverts(
+      RC.deleteTrustedDevice(deviceHashInBytes, device, { from: observer }), 'only for original source'
+    );
+  });
+
+  it('GATEWAY can NOT revoke the DEVICE due to has not been verified yet', async () => {
+    await RC.storeAuthNPayload(gatewayHashInBytes, GC, ISP, { from: domainOwner });
+    await RC.verifyAuthNGateway(gatewayHashInBytes, GC, { from: ISP });
+    await RC.storeAuthNPayload(deviceHashInBytes, device, vendor, { from: GC });
+    
+    // the device has not been verified yet
+    await truffleAssert.reverts(
+      RC.deleteTrustedDevice(deviceHashInBytes, device, { from: GC }), 'device must be trusted first'
+    );
+  });
+
+  it('GATEWAY can revoke the DEVICE properly', async () => {
+    await RC.storeAuthNPayload(gatewayHashInBytes, GC, ISP, { from: domainOwner });
+    await RC.verifyAuthNGateway(gatewayHashInBytes, GC, { from: ISP });
+    await RC.storeAuthNPayload(deviceHashInBytes, device, vendor, { from: GC });
+    await RC.verifyAuthNDevice(deviceHashInBytes, GC, device, { from: vendor });
+    
+    let status = await RC.isTrustedDevice(device, { from: observer });
+    assert.equal(status, true, "device address has been put into the trusted list");
+
+    let tx = await RC.deleteTrustedDevice(deviceHashInBytes, device, { from: GC });
+    truffleAssert.eventEmitted(tx, 'DeviceRevoked', { sender: GC, device: device });
+
+    status = await RC.isTrustedDevice(device, { from: observer });
+    assert.equal(status, false, "device address has been revoked");
   });
 });
