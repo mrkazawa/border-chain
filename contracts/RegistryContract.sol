@@ -23,10 +23,6 @@ contract RegistryContract {
     event GatewayRevoked(address sender, address gateway);
     event DeviceRevoked(address sender, address device);
 
-    constructor() public {
-		owner = msg.sender;
-	}
-
     modifier payloadMustExist(bytes32 IPFSHash) {
         require(payloads[IPFSHash].isValue, "payload must exist");
         _;
@@ -66,6 +62,10 @@ contract RegistryContract {
         require(payloads[IPFSHash].source == msg.sender, "only for original source");
         _;
     }
+
+    constructor() public {
+		owner = msg.sender;
+	}
 
     function storeAuthNPayload(bytes32 IPFSHash, address target, address verifier) public
     payloadMustNotExist(IPFSHash) {
@@ -119,7 +119,7 @@ contract RegistryContract {
        emit DeviceRevoked(msg.sender, device);
     }
 
-    function isValidPayloadForVerifier(bytes32 IPFSHash) external view
+    function isValidPayloadForVerifier(bytes32 IPFSHash) public view
     returns (bool) {
         if (payloads[IPFSHash].isValue &&
         payloads[IPFSHash].verifier == msg.sender &&
@@ -129,18 +129,20 @@ contract RegistryContract {
         return false;
     }
 
-    function isTrustedGateway(address gateway) external view
+    function isTrustedGateway(address gateway) public view
     returns (bool) {
         return (trustedGateways[gateway] == true);
     }
 
-    function isTrustedDevice(address device) external view
+    function isTrustedDevice(address device) public view
     returns (bool) {
         return (trustedGateways[trustedDevices[device]] == true);
     }
 
-    // get the verifier of given gateway
-    // get the requester of given gateway
-    // get the verifier of given device
-    // get the requester of given device
+    function getPayloadDetail(bytes32 IPFSHash) public view
+    returns (address, address, address) {
+        return (payloads[IPFSHash].source,
+        payloads[IPFSHash].target,
+        payloads[IPFSHash].verifier);
+    }
 }
