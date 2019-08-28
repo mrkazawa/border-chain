@@ -22,6 +22,7 @@
   "dependencies": {
     "bs58": "^4.0.1",
     "eth-crypto": "^1.4.0",
+    "ganache-cli": "^6.6.0",
     "ipfs-http-client": "^33.1.1",
     "truffle": "^5.0.33",
     "truffle-assertions": "^0.9.1",

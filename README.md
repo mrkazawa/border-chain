@@ -13,6 +13,7 @@ nvm use 8.9.4
 ```
 npm install truffle
 npm install truffle-assertions
+npm install ganache-cli
 npm install --save bs58
 npm install --save web3
 npm install eth-crypto --save
@@ -26,3 +27,11 @@ A guide for docker can be found here (URL). Once, the docker is installed, we do
 docker pull ipfs/go-ipfs:latest
 run-docker.sh
 ```
+
+
+## Running
+cd to the application
+git clone 
+ganache-cli -m dongseo
+truffle deploy
+make sure to get the address of the registry contract and update the rc_address.json
