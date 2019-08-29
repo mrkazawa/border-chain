@@ -1,5 +1,6 @@
 const EthCrypto = require('eth-crypto');
 const fs = require('fs');
+const rp = require('request-promise-native');
 const Web3 = require('web3');
 
 const tools = require('./actor_tools');
@@ -50,33 +51,49 @@ async function main() {
 
     // preparing payload
     const auth = {
-        routerIP:routerIP,
-        username:username,
-        password:password,
-        nonce:nonce
+        routerIP: routerIP,
+        username: username,
+        password: password,
+        nonce: nonce
     };
-    const payload = JSON.stringify(auth);
+    const authPayload = JSON.stringify(auth);
     // encrypting using ISP public key
     const ISPPublicKey = EthCrypto.publicKeyByPrivateKey(ISP.privateKey);
-    const encrypted = await EthCrypto.encryptWithPublicKey(ISPPublicKey, payload);
-    const encryptedPayload = EthCrypto.cipher.stringify(encrypted);
+    const authEncrypted = await EthCrypto.encryptWithPublicKey(ISPPublicKey, authPayload);
+    const authEncryptedPayload = EthCrypto.cipher.stringify(authEncrypted);
     // signing using OWNER private key
-    const payloadHash = EthCrypto.hash.keccak256(encryptedPayload);
-    const signature = EthCrypto.sign(owner.privateKey, payloadHash);
+    const authPayloadHash = EthCrypto.hash.keccak256(authEncryptedPayload);
+    const authSignature = EthCrypto.sign(owner.privateKey, authPayloadHash);
 
     // sending transaction to register payload to the smart contract
-    let tx = await RC.methods.storeAuthNPayload(payloadHash, GWAddress, ISPAddress).send({from: ownerAddres, gas: 1000000});
+    let tx = await RC.methods.storeAuthNPayload(authPayloadHash, GWAddress, ISPAddress).send({
+        from: ownerAddres,
+        gas: 1000000
+    });
     if (typeof tx.events.NewPayloadAdded !== 'undefined') {
         const event = tx.events.NewPayloadAdded;
-        if (event.returnValues['sender'] == ownerAddres && 
-        event.returnValues['IPFSHash'] == payloadHash) {
+        if (event.returnValues['sender'] == ownerAddres &&
+            event.returnValues['IPFSHash'] == authPayloadHash) {
             console.log('transaction received by contract!');
         }
     }
 
-    //RC.methods.isTrustedGateway(ISP.address).send({from: owner.address}).then(console.log);
-
+    const authEndpoint = 'http://localhost:3000/authenticate';
+    let options = {
+        method: 'POST',
+        uri: authEndpoint,
+        body: {
+            authPayload: authEncryptedPayload,
+            authSignature: authSignature
+        },
+        json: true // Automatically stringifies the body to JSON
+    };
     // sending authentication payload to the ISP
+    rp(options).then(function (parsedBody) {
+        console.log('sent');
+    }).catch(function (err) {
+        console.log(err);
+    });
 }
 
 main();

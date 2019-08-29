@@ -17,7 +17,9 @@ npm install ganache-cli
 npm install --save bs58
 npm install --save web3
 npm install eth-crypto --save
-npm install --save ipfs-http-client
+npm install express --save
+npm install --save request
+npm install --save request-promise-native
 ```
 
 ## Install IPFS hosts
