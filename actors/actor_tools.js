@@ -145,6 +145,13 @@ var self = module.exports = {
         return new web3.eth.Contract(abi, address);
     },
     /**
+     * Hash the payload.
+     * @param {string} payload  the payload to be hashed.
+     */
+    hashPayload: function (payload) {
+        return EthCrypto.hash.keccak256(payload);
+    },
+    /**
      * Encrypt the payload with destination public key.
      * Hash the encrypted payload.
      * Then, sign the message with the source private key.
@@ -155,9 +162,26 @@ var self = module.exports = {
     encryptAndSignPayload: async function (payload, destPublicKey, sourcePrivateKey) {
         const authEncrypted = await EthCrypto.encryptWithPublicKey(destPublicKey, payload);
         const authEncryptedPayload = EthCrypto.cipher.stringify(authEncrypted);
-        const authPayloadHash = EthCrypto.hash.keccak256(authEncryptedPayload);
+        const authPayloadHash = self.hashPayload(authEncryptedPayload);
         const authSignature = EthCrypto.sign(sourcePrivateKey, authPayloadHash);
         return [authPayloadHash, authSignature, authEncryptedPayload];
+    },
+    /**
+     * Recover the ethereum address from given signature.
+     * @param {string} signature    the signature.
+     * @param {string} hash         the hash pf the payload tied to the signature.
+     */
+    recoverAddress: function (signature, hash) {
+        return EthCrypto.recover(signature, hash);
+    },
+    /**
+     * Decrypt payload using source private key.
+     * @param {string} encryptedPayload the encrypted payload to be decrypted.
+     * @param {hex} privateKey          the key used to decrypt.
+     */
+    decryptPayload: async function (encryptedPayload, privateKey) {
+        const encrypted = EthCrypto.cipher.parse(encryptedPayload);
+        return await EthCrypto.decryptWithPrivateKey(privateKey, encrypted);
     },
     /**
      * Encrypt the message using symmetric encryption.

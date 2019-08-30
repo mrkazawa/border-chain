@@ -1,15 +1,5 @@
 const express = require('express');
-const EthCrypto = require('eth-crypto');
-const fs = require('fs');
-const Web3 = require('web3');
-
-const ownerPath = './ganache_files/owner.json';
-const ISPPath = './ganache_files/isp.json';
-const contractPath = './ganache_files/contract.json';
-const contractABIPath = '../build/contracts/RegistryContract.json';
-
-// connect to ganache network
-const web3 = new Web3(new Web3.providers.HttpProvider('http://localhost:8545'));
+const tools = require('./actor_tools');
 
 const app = express();
 app.use(express.json());
@@ -29,62 +19,41 @@ app.post('/authenticate', async (req, res) => {
         password: 'fish'
     };
 
-    // get owner credentials from file
-    // in real life, this will be database connection
-    let data = fs.readFileSync(ownerPath, 'utf8');
-    const owner = JSON.parse(data);
-    // get isp credentials from file
-    data = fs.readFileSync(ISPPath, 'utf8');
-    const ISP = JSON.parse(data);
-    // parsing the local ABI from truffle
-    // in live network, the ABI can be queried from etherscan.io
-    data = fs.readFileSync(contractABIPath, 'utf8');
-    const obj = JSON.parse(data);
-    // instantiate by address
-    data = fs.readFileSync(contractPath, 'utf8');
-    const contract = JSON.parse(data);
-
-    // checksumming all addresses
-    const ISPAddress = web3.utils.toChecksumAddress(ISP.address);
-    const RCAddress = web3.utils.toChecksumAddress(contract.address);
-    const ownerAddress = web3.utils.toChecksumAddress(owner.address);
+    // setup parameters that are known by the owner.
+    const ownerAddress = tools.getOwnerAddress();
+    const ISPPrivateKey = tools.getISPPrivateKey();
+    const ISPAddress = tools.getISPAddress();
+    const gatewayAddress = tools.getGatewayAddress();
 
     // creating RegistryContract from deployed contract at the given address
-    const RC = new web3.eth.Contract(obj.abi, RCAddress);
+    const RC = tools.constructSmartContract(tools.getContractABI(), tools.getContractAddress());
 
-    const authPayloadHash = EthCrypto.hash.keccak256(req.body.authPayload);
+    const authPayloadHash = tools.hashPayload(req.body.authPayload);
 
     // get payload detail here
     const payloadStatus = await RC.methods.isValidPayloadForVerifier(authPayloadHash).call({
         from: ISPAddress
     });
     if (payloadStatus) {
-        const signerAddress = EthCrypto.recover(req.body.authSignature, authPayloadHash);
+        const signerAddress = tools.recoverAddress(req.body.authSignature, authPayloadHash);
 
-        if (web3.utils.toChecksumAddress(signerAddress) == ownerAddress) {
-            const encrypted = EthCrypto.cipher.parse(req.body.authPayload);
-            const authString = await EthCrypto.decryptWithPrivateKey(ISP.privateKey, encrypted);
+        if (signerAddress == ownerAddress) {
+            const authString = await tools.decryptPayload(req.body.authPayload, ISPPrivateKey);
             const auth = JSON.parse(authString);
 
             if (auth.username == storedData.username &&
                 auth.password == storedData.password &&
                 auth.routerIP == storedData.routerIP) {
-                    
-                // temporary code
-                const gatewayPath = './ganache_files/gateway.json';
-                data = fs.readFileSync(gatewayPath, 'utf8');
-                const GW = JSON.parse(data);
-                const GWAddress = web3.utils.toChecksumAddress(GW.address);
 
                 // sending transaction to varify payload
                 // with hash only should be enough
-                let tx = await RC.methods.verifyAuthNGateway(authPayloadHash, GWAddress).send({
+                let tx = await RC.methods.verifyAuthNGateway(authPayloadHash, gatewayAddress).send({
                     from: ISPAddress
                 });
                 if (typeof tx.events.GatewayVerified !== 'undefined') {
                     const event = tx.events.GatewayVerified;
                     if (event.returnValues['sender'] == ISPAddress &&
-                        event.returnValues['gateway'] == GWAddress) {
+                        event.returnValues['gateway'] == gatewayAddress) {
                         console.log('transaction received by contract!');
                         res.status(200).send('authentication attempt successful');
                     }
