@@ -30,7 +30,7 @@ async function main() {
     if (typeof tx.events.NewPayloadAdded !== 'undefined') {
         const event = tx.events.NewPayloadAdded;
         if (event.returnValues['sender'] == ownerAddress &&
-            event.returnValues['IPFSHash'] == authPayloadHash) {
+            event.returnValues['payloadHash'] == authPayloadHash) {
             console.log('transaction received by contract!');
 
             // sending authentication payload to the ISP
@@ -55,7 +55,7 @@ async function main() {
                 console.log(err);
             });
         } else {
-            console.log('received wrong event!');
+            console.log('event values are wrong!');
         }
     } else {
         console.log('transaction failed!');

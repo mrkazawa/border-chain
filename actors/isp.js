@@ -4,7 +4,10 @@ const tools = require('./actor_tools');
 const app = express();
 app.use(express.json());
 app.use(function (err, req, res, next) {
-    res.status(err.status || 500).json({status: err.status, message: err.message});
+    res.status(err.status || 500).json({
+        status: err.status,
+        message: err.message
+    });
 });
 
 app.post('/authenticate', async (req, res) => {
@@ -30,11 +33,14 @@ app.post('/authenticate', async (req, res) => {
 
     const authPayloadHash = tools.hashPayload(req.body.authPayload);
 
-    // get payload detail here
-    const payloadStatus = await RC.methods.isValidPayloadForVerifier(authPayloadHash).call({
+    const payload = await RC.methods.getPayloadDetail(authPayloadHash).call({
         from: ISPAddress
     });
-    if (payloadStatus) {
+
+    // check if verifier is ISPAddress,
+    // payload isValue is true,
+    // payload isVerified is false
+    if (payload[2] == ISPAddress && payload[3] && payload[4] == false) {
         const signerAddress = tools.recoverAddress(req.body.authSignature, authPayloadHash);
 
         if (signerAddress == ownerAddress) {
@@ -47,7 +53,7 @@ app.post('/authenticate', async (req, res) => {
 
                 // sending transaction to varify payload
                 // with hash only should be enough
-                let tx = await RC.methods.verifyAuthNGateway(authPayloadHash, gatewayAddress).send({
+                let tx = await RC.methods.verifyAuthNGateway(authPayloadHash).send({
                     from: ISPAddress
                 });
                 if (typeof tx.events.GatewayVerified !== 'undefined') {
@@ -62,18 +68,6 @@ app.post('/authenticate', async (req, res) => {
         }
     }
 });
-
-function isValidPayloadForVerifier(bytes32 payloadHash) public view
-    returns (bool) {
-        if (payloads[payloadHash].isValue &&
-        payloads[payloadHash].verifier == msg.sender &&
-        payloads[payloadHash].isVerified == false) {
-            return true;
-        }
-        return false;
-    }
-
-
 
 // main
 app.listen(3000, () =>
