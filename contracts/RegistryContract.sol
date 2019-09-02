@@ -12,8 +12,8 @@ contract RegistryContract {
     address public owner;
     // key: payloadHash, value: Payload struct
     mapping (bytes32 => AuthenticationPayload) public payloads;
-    // key: gateway address, value: true if trusted
-    mapping (address => bool) trustedGateways;
+    // key: gateway address, value: reachable IP if trusted (not trusted will be 0x0)
+    mapping (address => bytes32) trustedGateways;
     // key: device address, value: current list of gateway address
     mapping (address => address) trustedDevices;
 
@@ -44,12 +44,12 @@ contract RegistryContract {
     }
 
     modifier gatewayMustTrusted(address gateway) {
-        require(trustedGateways[gateway] == true, "gateway must be trusted first");
+        require(trustedGateways[gateway] != 0, "gateway must be trusted first");
         _;
     }
 
     modifier deviceMustTrusted(address device) {
-        require(trustedGateways[trustedDevices[device]] == true, "device must be trusted first");
+        require(trustedGateways[trustedDevices[device]] != 0, "device must be trusted first");
         _;
     }
 
@@ -74,11 +74,11 @@ contract RegistryContract {
         emit NewPayloadAdded(msg.sender, payloadHash);
     }
 
-    function verifyAuthNGateway(bytes32 payloadHash) public
+    function verifyAuthNGateway(bytes32 payloadHash, bytes32 routerIP) public
     payloadMustExist(payloadHash)
     payloadMustNotVerified(payloadHash)
     onlyForVerifier(payloadHash) {
-        trustedGateways[payloads[payloadHash].target] = true;
+        trustedGateways[payloads[payloadHash].target] = routerIP;
         payloads[payloadHash].isVerified = true;
 
         emit GatewayVerified(msg.sender, payloads[payloadHash].target);
@@ -99,7 +99,7 @@ contract RegistryContract {
     payloadMustExist(payloadHash)
     onlyForSource(payloadHash)
     gatewayMustTrusted(gateway) {
-        trustedGateways[gateway] = false;
+        trustedGateways[gateway] = 0;
 
         emit GatewayRevoked(msg.sender, gateway);
     }
@@ -115,12 +115,12 @@ contract RegistryContract {
 
     function isTrustedGateway(address gateway) public view
     returns (bool) {
-        return (trustedGateways[gateway] == true);
+        return (trustedGateways[gateway] != 0);
     }
 
     function isTrustedDevice(address device) public view
     returns (bool) {
-        return (trustedGateways[trustedDevices[device]] == true);
+        return (trustedGateways[trustedDevices[device]] != 0);
     }
 
     function getPayloadDetail(bytes32 payloadHash) public view
@@ -130,5 +130,10 @@ contract RegistryContract {
         payloads[payloadHash].verifier,
         payloads[payloadHash].isValue,
         payloads[payloadHash].isVerified);
+    }
+
+    function getGatewayIP(address gateway) public view
+    returns (bytes32) {
+        return trustedGateways[gateway];
     }
 }

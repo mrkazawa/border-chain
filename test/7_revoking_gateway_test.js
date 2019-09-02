@@ -11,6 +11,7 @@ contract('Revoking Gateway Test', (accounts) => {
 
     const gatewayPayloadHash = '0x017dfd85d4f6cb4dcd715a88101f7b1f06cd1e009b2327a0809d01eb9c91f231';
     const devicePayloadHash = '0x017dfd85d4f6cb4dcd715a88101f7b1f06cd1e009b2327a0809d01eb9c91f200';
+    const routerIP = web3.utils.fromAscii("200.100.10.10");
     let RC;
 
     beforeEach('deploy contract and store a valid payload', async () => {
@@ -21,7 +22,7 @@ contract('Revoking Gateway Test', (accounts) => {
     });
 
     it('DOMAIN OWNER can NOT revoke the GATEWAY due to invalid PAYLOAD (not exist)', async () => {
-        await RC.verifyAuthNGateway(gatewayPayloadHash, {
+        await RC.verifyAuthNGateway(gatewayPayloadHash, routerIP, {
             from: ISPAddress
         });
         const fakeHash = '0x017dfd85d4f6cb4dcd715a88101f7b1f06cd1e009b2327a0809d01eb9c91f000';
@@ -33,7 +34,7 @@ contract('Revoking Gateway Test', (accounts) => {
     });
 
     it('OBSERVER can NOT revoke the GATEWAY due to invalid SOURCE', async () => {
-        await RC.verifyAuthNGateway(gatewayPayloadHash, {
+        await RC.verifyAuthNGateway(gatewayPayloadHash, routerIP, {
             from: ISPAddress
         });
         // an observer cannot arbitrarily revoke a gateway
@@ -54,7 +55,7 @@ contract('Revoking Gateway Test', (accounts) => {
     });
 
     it('DOMAIN OWNER can revoke the GATEWAY properly', async () => {
-        await RC.verifyAuthNGateway(gatewayPayloadHash, {
+        await RC.verifyAuthNGateway(gatewayPayloadHash, routerIP, {
             from: ISPAddress
         });
         await RC.storeAuthNPayload(devicePayloadHash, deviceUUID, vendorAddress, {

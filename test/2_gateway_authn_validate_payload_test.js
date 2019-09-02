@@ -8,6 +8,7 @@ contract('Gateway Authentication -- Validating Payload Test', (accounts) => {
     const observerAddress = accounts[9]; // anonymous node address
 
     const payloadHash = '0x017dfd85d4f6cb4dcd715a88101f7b1f06cd1e009b2327a0809d01eb9c91f231';
+    const routerIP = web3.utils.fromAscii("200.100.10.10");
     let RC;
 
     beforeEach('deploy contract and store a valid payload', async () => {
@@ -20,19 +21,19 @@ contract('Gateway Authentication -- Validating Payload Test', (accounts) => {
     it('ISP can NOT verify the GATEWAY due to invalid PAYLOAD (not exist)', async () => {
         const fakeHash = '0x017dfd85d4f6cb4dcd715a88101f7b1f06cd1e009b2327a0809d01eb9c91f000';
         await truffleAssert.reverts(
-            RC.verifyAuthNGateway(fakeHash, {
+            RC.verifyAuthNGateway(fakeHash, routerIP, {
                 from: ISPAddress
             }), 'payload must exist'
         );
     });
 
     it('ISP can NOT verify the GATEWAY due to invalid PAYLOAD (already verified)', async () => {
-        await RC.verifyAuthNGateway(payloadHash, {
+        await RC.verifyAuthNGateway(payloadHash, routerIP, {
             from: ISPAddress
         });
         // double verifing is not allowed
         await truffleAssert.reverts(
-            RC.verifyAuthNGateway(payloadHash, {
+            RC.verifyAuthNGateway(payloadHash, routerIP, {
                 from: ISPAddress
             }), 'payload must not verified'
         );
@@ -41,7 +42,7 @@ contract('Gateway Authentication -- Validating Payload Test', (accounts) => {
     it('OBSERVER can NOT verify the GATEWAY due to invalid VERIFIER', async () => {
         // an observer cannot arbitrarily verify a payload
         await truffleAssert.reverts(
-            RC.verifyAuthNGateway(payloadHash, {
+            RC.verifyAuthNGateway(payloadHash, routerIP, {
                 from: observerAddress
             }), 'only for valid verifier'
         );
@@ -52,12 +53,13 @@ contract('Gateway Authentication -- Validating Payload Test', (accounts) => {
             from: observerAddress
         });
         assert.equal(status, false, "gateway address is NOT in the trusted list");
+
         let payload = await RC.getPayloadDetail(payloadHash, {
             from: ISPAddress
         });
         assert.equal(payload[4], false, "isVerified");
 
-        let tx = await RC.verifyAuthNGateway(payloadHash, {
+        let tx = await RC.verifyAuthNGateway(payloadHash, routerIP, {
             from: ISPAddress
         });
         truffleAssert.eventEmitted(tx, 'GatewayVerified', {
@@ -69,6 +71,7 @@ contract('Gateway Authentication -- Validating Payload Test', (accounts) => {
             from: observerAddress
         });
         assert.equal(status, true, "gateway address has been put into the trusted list");
+
         payload = await RC.getPayloadDetail(payloadHash, {
             from: ISPAddress
         });

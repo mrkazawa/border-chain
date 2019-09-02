@@ -11,6 +11,7 @@ contract('Device Authentication -- Validating Payload Test', (accounts) => {
 
     const gatewayPayloadHash = '0x017dfd85d4f6cb4dcd715a88101f7b1f06cd1e009b2327a0809d01eb9c91f231';
     const devicePayloadHash = '0x017dfd85d4f6cb4dcd715a88101f7b1f06cd1e009b2327a0809d01eb9c91f200';
+    const routerIP = web3.utils.fromAscii("200.100.10.10");
     let RC;
 
     beforeEach('deploy contract and store a valid payload for gateway and device', async () => {
@@ -24,7 +25,7 @@ contract('Device Authentication -- Validating Payload Test', (accounts) => {
     });
 
     it('VENDOR can NOT verify the DEVICE due to invalid HASH', async () => {
-        await RC.verifyAuthNGateway(gatewayPayloadHash, {
+        await RC.verifyAuthNGateway(gatewayPayloadHash, routerIP, {
             from: ISPAddress
         });
         const fakeHash = '0x017dfd85d4f6cb4dcd715a88101f7b1f06cd1e009b2327a0809d01eb9c91f000';
@@ -36,7 +37,7 @@ contract('Device Authentication -- Validating Payload Test', (accounts) => {
     });
 
     it('OBSERVER can NOT verify the DEVICE due to invalid VERIFIER', async () => {
-        await RC.verifyAuthNGateway(gatewayPayloadHash, {
+        await RC.verifyAuthNGateway(gatewayPayloadHash, routerIP, {
             from: ISPAddress
         });
         // an observer cannot arbitrarily verify a payload
@@ -57,7 +58,7 @@ contract('Device Authentication -- Validating Payload Test', (accounts) => {
     });
 
     it('VENDOR can verify the DEVICE correctly', async () => {
-        await RC.verifyAuthNGateway(gatewayPayloadHash, {
+        await RC.verifyAuthNGateway(gatewayPayloadHash, routerIP, {
             from: ISPAddress
         });
 

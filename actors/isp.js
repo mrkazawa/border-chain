@@ -53,7 +53,8 @@ app.post('/authenticate', async (req, res) => {
 
                 // sending transaction to varify payload
                 // with hash only should be enough
-                let tx = await RC.methods.verifyAuthNGateway(authPayloadHash).send({
+                const routerIP = tools.convertStringToByte(storedData.routerIP);
+                let tx = await RC.methods.verifyAuthNGateway(authPayloadHash, routerIP).send({
                     from: ISPAddress
                 });
                 if (typeof tx.events.GatewayVerified !== 'undefined') {
@@ -61,11 +62,22 @@ app.post('/authenticate', async (req, res) => {
                     if (event.returnValues['sender'] == ISPAddress &&
                         event.returnValues['gateway'] == gatewayAddress) {
                         console.log('transaction received by contract!');
+
                         res.status(200).send('authentication attempt successful');
+                    } else {
+                        res.status(500).send('received wrong event from blockchain!');
                     }
+                } else {
+                    res.status(500).send('cannot verify to blockchain!');
                 }
+            } else {
+                res.status(403).send('content does not match!!');
             }
+        } else {
+            res.status(403).send('signature does not match!');
         }
+    } else {
+        res.status(404).send('payload not found!');
     }
 });
 

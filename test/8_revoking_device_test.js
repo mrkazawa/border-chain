@@ -11,6 +11,7 @@ contract('Revoking Device Test', (accounts) => {
 
     const gatewayPayloadHash = '0x017dfd85d4f6cb4dcd715a88101f7b1f06cd1e009b2327a0809d01eb9c91f231';
     const devicePayloadHash = '0x017dfd85d4f6cb4dcd715a88101f7b1f06cd1e009b2327a0809d01eb9c91f200';
+    const routerIP = web3.utils.fromAscii("200.100.10.10");
     let RC;
 
     beforeEach('deploy contract, store valid payloads, validate gateway', async () => {
@@ -18,7 +19,7 @@ contract('Revoking Device Test', (accounts) => {
         await RC.storeAuthNPayload(gatewayPayloadHash, gatewayAddress, ISPAddress, {
             from: ownerAddress
         });
-        await RC.verifyAuthNGateway(gatewayPayloadHash, {
+        await RC.verifyAuthNGateway(gatewayPayloadHash, routerIP, {
             from: ISPAddress
         });
         await RC.storeAuthNPayload(devicePayloadHash, deviceUUID, vendorAddress, {

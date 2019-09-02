@@ -51,9 +51,15 @@ async function main() {
                     console.log('error!');
                 }
                 console.log(response.body);
+
             }).catch(function (err) {
                 console.log(err);
             });
+
+            const gatewayIP = await RC.methods.getGatewayIP(gatewayAddress).call({
+                from: ownerAddress
+            });
+            console.log('Gateway IP:', tools.convertByteToString(gatewayIP));
         } else {
             console.log('event values are wrong!');
         }

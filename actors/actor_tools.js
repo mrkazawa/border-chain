@@ -204,5 +204,11 @@ var self = module.exports = {
         let deciphered = decipher.update(ciphered, outputEncoding, inputEncoding);
         deciphered += decipher.final(inputEncoding);
         return deciphered;
+    },
+    convertStringToByte: function (string) {
+        return web3.utils.fromAscii(string);
+    },
+    convertByteToString: function (byte) {
+        return web3.utils.toAscii(byte);
     }
 }
