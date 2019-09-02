@@ -22,18 +22,10 @@ npm install --save request
 npm install --save request-promise-native
 ```
 
-## Install IPFS hosts
-We use the dockerized version of the IPFS deamon. So you need to have docker in your machine.
-A guide for docker can be found here (URL). Once, the docker is installed, we download the IPFS contrainer with this command
-```
-docker pull ipfs/go-ipfs:latest
-run-docker.sh
-```
-
-
 ## Running
 cd to the application
 git clone 
 ganache-cli -m dongseo
 truffle deploy
+
 make sure to get the address of the registry contract and update the rc_address.json

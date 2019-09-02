@@ -63,6 +63,18 @@ app.post('/authenticate', async (req, res) => {
     }
 });
 
+function isValidPayloadForVerifier(bytes32 payloadHash) public view
+    returns (bool) {
+        if (payloads[payloadHash].isValue &&
+        payloads[payloadHash].verifier == msg.sender &&
+        payloads[payloadHash].isVerified == false) {
+            return true;
+        }
+        return false;
+    }
+
+
+
 // main
 app.listen(3000, () =>
     console.log('ISP Authentication Server is listening on port 3000!'),
