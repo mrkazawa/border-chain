@@ -3,6 +3,12 @@ const tools = require('./actor_tools');
 
 const app = express();
 app.use(express.json());
+app.use(function (err, req, res, next) {
+    res.status(err.status || 500).json({
+        status: err.status,
+        message: err.message
+    });
+});
 
 app.post('/authenticate', async (req, res) => {
     /**
@@ -15,18 +21,18 @@ app.post('/authenticate', async (req, res) => {
         username: 'john',
         password: 'fish'
     };
-    // setup parameters that are known by the ISP.
+
+    // setup parameters that are known by the owner.
+    const ownerAddress = tools.getOwnerAddress();
     const ISPPrivateKey = tools.getISPPrivateKey();
     const ISPAddress = tools.getISPAddress();
-
-    // get the payload from the http request
-    const authPayload = req.body.authPayload;
-    const authSignature = req.body.authSignature;
+    const gatewayAddress = tools.getGatewayAddress();
 
     // creating RegistryContract from deployed contract at the given address
     const RC = tools.constructSmartContract(tools.getContractABI(), tools.getContractAddress());
 
-    const authPayloadHash = tools.hashPayload(authPayload);
+    const authPayloadHash = tools.hashPayload(req.body.authPayload);
+
     const payload = await RC.methods.getPayloadDetail(authPayloadHash).call({
         from: ISPAddress
     });
@@ -34,14 +40,13 @@ app.post('/authenticate', async (req, res) => {
     // check if verifier is ISPAddress,
     // payload isValue is true,
     // payload isVerified is false
-    if (payload[2] == ISPAddress && payload[3] && !payload[4]) {
-        const signerAddress = tools.recoverAddress(authSignature, authPayloadHash);
-        // check if the signature is sign by the source of payload
-        if (signerAddress == payload[0]) {
-            const authString = await tools.decryptPayload(authPayload, ISPPrivateKey);
+    if (payload[2] == ISPAddress && payload[3] && payload[4] == false) {
+        const signerAddress = tools.recoverAddress(req.body.authSignature, authPayloadHash);
+
+        if (signerAddress == ownerAddress) {
+            const authString = await tools.decryptPayload(req.body.authPayload, ISPPrivateKey);
             const auth = JSON.parse(authString);
 
-            // TODO: checking auth.nonce in real production with database connection
             if (auth.username == storedData.username &&
                 auth.password == storedData.password &&
                 auth.routerIP == storedData.routerIP) {
@@ -54,16 +59,19 @@ app.post('/authenticate', async (req, res) => {
                 });
                 if (typeof tx.events.GatewayVerified !== 'undefined') {
                     const event = tx.events.GatewayVerified;
-                    console.log('Tx stored in the block!');
-                    console.log('Verify Authn Tx from: ', event.returnValues['sender']);
-                    console.log('Authn for: ', event.returnValues['gateway']);
+                    if (event.returnValues['sender'] == ISPAddress &&
+                        event.returnValues['gateway'] == gatewayAddress) {
+                        console.log('transaction received by contract!');
 
-                    res.status(200).send('authentication attempt successful');
+                        res.status(200).send('authentication attempt successful');
+                    } else {
+                        res.status(500).send('received wrong event from blockchain!');
+                    }
                 } else {
-                    res.status(500).send('cannot store verify Tx to blockchain!');
+                    res.status(500).send('cannot verify to blockchain!');
                 }
             } else {
-                res.status(403).send('auth content does not match!!');
+                res.status(403).send('content does not match!!');
             }
         } else {
             res.status(403).send('signature does not match!');
@@ -75,5 +83,5 @@ app.post('/authenticate', async (req, res) => {
 
 // main
 app.listen(3000, () =>
-    console.log('ISP Authentication Server is listening on port 3000!'),
+    console.log('Vendor Authentication Server is listening on port 4000!'),
 );

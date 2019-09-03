@@ -7,12 +7,16 @@ const Web3 = require('web3');
 const ownerPath = './ganache_files/owner.json';
 const ISPPath = './ganache_files/isp.json';
 const gatewayPath = './ganache_files/gateway.json';
+const devicePath = './ganache_files/device.json';
+const vendorPath = './ganache_files/vendor.json';
 const contractPath = './ganache_files/contract.json';
 const contractABIPath = '../build/contracts/RegistryContract.json';
 
 // the endpoints
-const ISPAuthEndpoint = 'http://localhost:3000/authenticate';
-const vendorAuthEndpoint = 'http://localhost:4000/authenticate';
+const ISPAuthnEndpoint = 'http://localhost:3000/authenticate';
+const vendorAuthnEndpoint = 'http://localhost:4000/authenticate';
+const gatewayAuthnEndpoint = 'http://localhost:5000/authenticate';
+const gatewayAuthzEndpoint = 'http://localhost:5000/authorize';
 
 // for symmetric encryption and decryption
 const algorithm = 'aes256';
@@ -45,96 +49,6 @@ var self = module.exports = {
     readFile: function (path) {
         let data = fs.readFileSync(path, 'utf8');
         return JSON.parse(data);
-    },
-    /**
-     * Get owner private key from ganache configuration.
-     */
-    getOwnerPrivateKey: function () {
-        let obj = self.readFile(ownerPath);
-        return obj.privateKey;
-    },
-    /**
-     * Get owner public key from ganache configuration.
-     */
-    getOwnerPublicKey: function () {
-        let obj = self.readFile(ownerPath);
-        return EthCrypto.publicKeyByPrivateKey(obj.privateKey);
-    },
-    /**
-     * Get owner address from ganache configuration.
-     */
-    getOwnerAddress: function() {
-        let obj = self.readFile(ownerPath);
-        return web3.utils.toChecksumAddress(obj.address);
-    },
-    /**
-     * Get ISP private key from ganache configuration.
-     */
-    getISPPrivateKey: function () {
-        let obj = self.readFile(ISPPath);
-        return obj.privateKey;
-    },
-    /**
-     * Get ISP public key from ganache configuration.
-     */
-    getISPPublicKey: function () {
-        let obj = self.readFile(ISPPath);
-        return EthCrypto.publicKeyByPrivateKey(obj.privateKey);
-    },
-    /**
-     * Get ISP address from ganache configuration.
-     */
-    getISPAddress: function() {
-        let obj = self.readFile(ISPPath);
-        return web3.utils.toChecksumAddress(obj.address);
-    },
-    /**
-     * Get gateway private key from ganache configuration.
-     */
-    getGatewayPrivateKey: function () {
-        let obj = self.readFile(gatewayPath);
-        return obj.privateKey;
-    },
-    /**
-     * Get gateway public key from ganache configuration.
-     */
-    getGatewayPublicKey: function () {
-        let obj = self.readFile(gatewayPath);
-        return EthCrypto.publicKeyByPrivateKey(obj.privateKey);
-    },
-    /**
-     * Get gateway address from ganache configuration.
-     */
-    getGatewayAddress: function() {
-        let obj = self.readFile(gatewayPath);
-        return web3.utils.toChecksumAddress(obj.address);
-    },
-    /**
-     * Get contract address from ganache after 'truffle deploy'.
-     */
-    getContractAddress: function () {
-        let obj = self.readFile(contractPath);
-        return web3.utils.toChecksumAddress(obj.address);
-    },
-    /**
-     * Parsing the local contract ABI from truffle.
-     * in live network, the ABI can be queried from etherscan.io
-     */
-    getContractABI: function () {
-        let obj = self.readFile(contractABIPath);
-        return obj.abi;
-    },
-    /**
-     * Get the endpoint URL to authenticate the gateway.
-     */
-    getISPAuthEndpoint: function () {
-        return ISPAuthEndpoint;
-    },
-    /**
-     * Get the endpoint URL to authenticate the device.
-     */
-    getVendorAuthEndpoint: function () {
-        return vendorAuthEndpoint;
     },
     /**
      * Construct a web3 object of the smart contract.
@@ -205,10 +119,171 @@ var self = module.exports = {
         deciphered += decipher.final(inputEncoding);
         return deciphered;
     },
+    /**
+     * Convert string to byte (for smart contract).
+     * We can store more efficiently in bytes rather than in string
+     * @param {*} string    string to be converted.
+     */
     convertStringToByte: function (string) {
         return web3.utils.fromAscii(string);
     },
+    /**
+     * Convert byte to string (for smart contract).
+     * @param {*} byte      byte to be converted.
+     */
     convertByteToString: function (byte) {
         return web3.utils.toAscii(byte);
+    },
+
+//----------------------------- Getters -----------------------------//
+
+    /**
+     * Get owner private key from ganache configuration.
+     */
+    getOwnerPrivateKey: function () {
+        let obj = self.readFile(ownerPath);
+        return obj.privateKey;
+    },
+    /**
+     * Get owner public key from ganache configuration.
+     */
+    getOwnerPublicKey: function () {
+        let obj = self.readFile(ownerPath);
+        return EthCrypto.publicKeyByPrivateKey(obj.privateKey);
+    },
+    /**
+     * Get owner address from ganache configuration.
+     */
+    getOwnerAddress: function() {
+        let obj = self.readFile(ownerPath);
+        return web3.utils.toChecksumAddress(obj.address);
+    },
+
+    /**
+     * Get ISP private key from ganache configuration.
+     */
+    getISPPrivateKey: function () {
+        let obj = self.readFile(ISPPath);
+        return obj.privateKey;
+    },
+    /**
+     * Get ISP public key from ganache configuration.
+     */
+    getISPPublicKey: function () {
+        let obj = self.readFile(ISPPath);
+        return EthCrypto.publicKeyByPrivateKey(obj.privateKey);
+    },
+    /**
+     * Get ISP address from ganache configuration.
+     */
+    getISPAddress: function() {
+        let obj = self.readFile(ISPPath);
+        return web3.utils.toChecksumAddress(obj.address);
+    },
+
+    /**
+     * Get gateway private key from ganache configuration.
+     */
+    getGatewayPrivateKey: function () {
+        let obj = self.readFile(gatewayPath);
+        return obj.privateKey;
+    },
+    /**
+     * Get gateway public key from ganache configuration.
+     */
+    getGatewayPublicKey: function () {
+        let obj = self.readFile(gatewayPath);
+        return EthCrypto.publicKeyByPrivateKey(obj.privateKey);
+    },
+    /**
+     * Get gateway address from ganache configuration.
+     */
+    getGatewayAddress: function() {
+        let obj = self.readFile(gatewayPath);
+        return web3.utils.toChecksumAddress(obj.address);
+    },
+
+    /**
+     * Get vendor private key from ganache configuration.
+     */
+    getVendorPrivateKey: function () {
+        let obj = self.readFile(vendorPath);
+        return obj.privateKey;
+    },
+    /**
+     * Get vendor public key from ganache configuration.
+     */
+    getVendorPublicKey: function () {
+        let obj = self.readFile(vendorPath);
+        return EthCrypto.publicKeyByPrivateKey(obj.privateKey);
+    },
+    /**
+     * Get vendor address from ganache configuration.
+     */
+    getVendorAddress: function() {
+        let obj = self.readFile(vendorPath);
+        return web3.utils.toChecksumAddress(obj.address);
+    },
+
+    /**
+     * Get device private key from ganache configuration.
+     */
+    getDevicePrivateKey: function () {
+        let obj = self.readFile(devicePath);
+        return obj.privateKey;
+    },
+    /**
+     * Get device public key from ganache configuration.
+     */
+    getDevicePublicKey: function () {
+        let obj = self.readFile(devicePath);
+        return EthCrypto.publicKeyByPrivateKey(obj.privateKey);
+    },
+    /**
+     * Get device address from ganache configuration.
+     */
+    getDeviceAddress: function() {
+        let obj = self.readFile(devicePath);
+        return web3.utils.toChecksumAddress(obj.address);
+    },
+
+    /**
+     * Get contract address from ganache after 'truffle deploy'.
+     */
+    getContractAddress: function () {
+        let obj = self.readFile(contractPath);
+        return web3.utils.toChecksumAddress(obj.address);
+    },
+    /**
+     * Parsing the local contract ABI from truffle.
+     * in live network, the ABI can be queried from etherscan.io
+     */
+    getContractABI: function () {
+        let obj = self.readFile(contractABIPath);
+        return obj.abi;
+    },
+    /**
+     * Get the endpoint URL to authenticate the gateway in ISP.
+     */
+    getISPAuthnEndpoint: function () {
+        return ISPAuthnEndpoint;
+    },
+    /**
+     * Get the endpoint URL to authenticate the device in vendor.
+     */
+    getVendorAuthnEndpoint: function () {
+        return vendorAuthnEndpoint;
+    },
+    /**
+     * Get the endpoint URL to authenticate the device in gateway.
+     */
+    getGatewayAuthnEndpoint: function () {
+        return gatewayAuthnEndpoint;
+    },
+    /**
+     * Get the endpoint URL to suthorize the device in gateway.
+     */
+    getGatewayAuthzEndpoint: function () {
+        return gatewayAuthzEndpoint;
     }
 }
