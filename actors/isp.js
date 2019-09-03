@@ -1,36 +1,34 @@
 const express = require('express');
 const tools = require('./actor_tools');
 
+/**
+ * our mock of users data stored in the ISP
+ * in real life, this data is collected by ISP during users
+ * registration and then stored in database.
+ */
+const storedData = {
+    routerIP: '200.100.10.10',
+    username: 'john',
+    password: 'fish'
+};
+// setup parameters that are known by the ISP.
+const ISPPrivateKey = tools.getISPPrivateKey();
+const ISPAddress = tools.getISPAddress();
+// creating RegistryContract from deployed contract at the given address
+const RC = tools.constructSmartContract(tools.getContractABI(), tools.getContractAddress());
+
 const app = express();
 app.use(express.json());
 
 app.post('/authenticate', async (req, res) => {
-    /**
-     * our mock of users data stored in the ISP
-     * in real life, this data is collected by ISP during users
-     * registration and then stored in database.
-     */
-    const storedData = {
-        routerIP: '200.100.10.10',
-        username: 'john',
-        password: 'fish'
-    };
-    // setup parameters that are known by the ISP.
-    const ISPPrivateKey = tools.getISPPrivateKey();
-    const ISPAddress = tools.getISPAddress();
-
     // get the payload from the http request
-    const authPayload = req.body.authPayload;
+    const authEncryptedPayload = req.body.authEncryptedPayload;
     const authSignature = req.body.authSignature;
 
-    // creating RegistryContract from deployed contract at the given address
-    const RC = tools.constructSmartContract(tools.getContractABI(), tools.getContractAddress());
-
-    const authPayloadHash = tools.hashPayload(authPayload);
+    const authPayloadHash = tools.hashPayload(authEncryptedPayload);
     const payload = await RC.methods.getPayloadDetail(authPayloadHash).call({
         from: ISPAddress
     });
-
     // check if verifier is ISPAddress,
     // payload isValue is true,
     // payload isVerified is false
@@ -38,7 +36,7 @@ app.post('/authenticate', async (req, res) => {
         const signerAddress = tools.recoverAddress(authSignature, authPayloadHash);
         // check if the signature is sign by the source of payload
         if (signerAddress == payload[0]) {
-            const authString = await tools.decryptPayload(authPayload, ISPPrivateKey);
+            const authString = await tools.decryptPayload(authEncryptedPayload, ISPPrivateKey);
             const auth = JSON.parse(authString);
 
             // TODO: checking auth.nonce in real production with database connection

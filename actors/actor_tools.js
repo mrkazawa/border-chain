@@ -78,7 +78,7 @@ var self = module.exports = {
         const authEncryptedPayload = EthCrypto.cipher.stringify(authEncrypted);
         const authPayloadHash = self.hashPayload(authEncryptedPayload);
         const authSignature = EthCrypto.sign(sourcePrivateKey, authPayloadHash);
-        return [authPayloadHash, authSignature, authEncryptedPayload];
+        return [authSignature, authEncryptedPayload];
     },
     /**
      * Recover the ethereum address from given signature.

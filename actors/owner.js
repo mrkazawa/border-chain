@@ -17,7 +17,8 @@ async function main() {
         nonce: tools.randomValueBase64(32)
     };
     const authPayload = JSON.stringify(auth);
-    const [authPayloadHash, authSignature, authEncryptedPayload] = await tools.encryptAndSignPayload(authPayload, ISPPublicKey, ownerPrivateKey);
+    const [authSignature, authEncryptedPayload] = await tools.encryptAndSignPayload(authPayload, ISPPublicKey, ownerPrivateKey);
+    const authPayloadHash = tools.hashPayload(authEncryptedPayload);
 
     // creating RegistryContract from deployed contract at the given address
     const RC = tools.constructSmartContract(tools.getContractABI(), tools.getContractAddress());
@@ -38,7 +39,7 @@ async function main() {
             method: 'POST',
             uri: tools.getISPAuthnEndpoint(),
             body: {
-                authPayload: authEncryptedPayload,
+                authEncryptedPayload: authEncryptedPayload,
                 authSignature: authSignature
             },
             resolveWithFullResponse: true,

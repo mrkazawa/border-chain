@@ -1,77 +1,61 @@
 const express = require('express');
 const tools = require('./actor_tools');
 
+/**
+ * our mock of devices data stored in the vendor
+ * in real life, this data is collected by vendor during devices'
+ * manufacturing and then stored in database.
+ */
+const storedData = {
+    deviceUUID: tools.getDeviceAddress(),
+    deviceSN: 'serial_number_1234'
+};
+// setup parameters that are known by the vendor.
+const vendorPrivateKey = tools.getVendorPrivateKey();
+const vendorAddress = tools.getVendorAddress();
+// creating RegistryContract from deployed contract at the given address
+const RC = tools.constructSmartContract(tools.getContractABI(), tools.getContractAddress());
+
 const app = express();
 app.use(express.json());
-app.use(function (err, req, res, next) {
-    res.status(err.status || 500).json({
-        status: err.status,
-        message: err.message
-    });
-});
 
 app.post('/authenticate', async (req, res) => {
-    /**
-     * our mock of users data stored in the ISP
-     * in real life, this data is collected by ISP during users
-     * registration and then stored in database.
-     */
-    const storedData = {
-        routerIP: '200.100.10.10',
-        username: 'john',
-        password: 'fish'
-    };
+    // get the payload from the http request
+    const authEncryptedPayload = req.body.authEncryptedPayload;
+    const authSignature = req.body.authSignature;
 
-    // setup parameters that are known by the owner.
-    const ownerAddress = tools.getOwnerAddress();
-    const ISPPrivateKey = tools.getISPPrivateKey();
-    const ISPAddress = tools.getISPAddress();
-    const gatewayAddress = tools.getGatewayAddress();
-
-    // creating RegistryContract from deployed contract at the given address
-    const RC = tools.constructSmartContract(tools.getContractABI(), tools.getContractAddress());
-
-    const authPayloadHash = tools.hashPayload(req.body.authPayload);
-
+    const authPayloadHash = tools.hashPayload(authEncryptedPayload);
     const payload = await RC.methods.getPayloadDetail(authPayloadHash).call({
-        from: ISPAddress
+        from: vendorAddress
     });
-
-    // check if verifier is ISPAddress,
+    // check if verifier is vendorAddress,
     // payload isValue is true,
     // payload isVerified is false
-    if (payload[2] == ISPAddress && payload[3] && payload[4] == false) {
-        const signerAddress = tools.recoverAddress(req.body.authSignature, authPayloadHash);
-
-        if (signerAddress == ownerAddress) {
-            const authString = await tools.decryptPayload(req.body.authPayload, ISPPrivateKey);
+    if (payload[2] == vendorAddress && payload[3] && !payload[4]) {
+        const signerAddress = tools.recoverAddress(authSignature, authPayloadHash);
+        // check if the signature is sign by the target of payload
+        if (signerAddress == payload[1]) {
+            const authString = await tools.decryptPayload(authEncryptedPayload, vendorPrivateKey);
             const auth = JSON.parse(authString);
-
-            if (auth.username == storedData.username &&
-                auth.password == storedData.password &&
-                auth.routerIP == storedData.routerIP) {
-
+            // check if serial number is correct
+            if (auth.deviceSN == storedData.deviceSN) {
                 // sending transaction to varify payload
-                // with hash only should be enough
-                const routerIP = tools.convertStringToByte(storedData.routerIP);
-                let tx = await RC.methods.verifyAuthNGateway(authPayloadHash, routerIP).send({
-                    from: ISPAddress
+                let tx = await RC.methods.verifyAuthNDevice(authPayloadHash).send({
+                    from: vendorAddress
                 });
-                if (typeof tx.events.GatewayVerified !== 'undefined') {
-                    const event = tx.events.GatewayVerified;
-                    if (event.returnValues['sender'] == ISPAddress &&
-                        event.returnValues['gateway'] == gatewayAddress) {
-                        console.log('transaction received by contract!');
+                if (typeof tx.events.DeviceVerified !== 'undefined') {
+                    const event = tx.events.DeviceVerified;
+                    console.log('Tx stored in the block!');
+                    console.log('Verify Authn Tx from: ', event.returnValues['sender']);
+                    console.log('Authn for GW: ', event.returnValues['gateway']);
+                    console.log('Authn for device: ', event.returnValues['device']);
 
-                        res.status(200).send('authentication attempt successful');
-                    } else {
-                        res.status(500).send('received wrong event from blockchain!');
-                    }
+                    res.status(200).send('authentication attempt successful');
                 } else {
-                    res.status(500).send('cannot verify to blockchain!');
+                    res.status(500).send('cannot store verify Tx to blockchain!');
                 }
             } else {
-                res.status(403).send('content does not match!!');
+                res.status(403).send('auth content does not match!!');
             }
         } else {
             res.status(403).send('signature does not match!');
@@ -82,6 +66,6 @@ app.post('/authenticate', async (req, res) => {
 });
 
 // main
-app.listen(3000, () =>
+app.listen(4000, () =>
     console.log('Vendor Authentication Server is listening on port 4000!'),
 );
