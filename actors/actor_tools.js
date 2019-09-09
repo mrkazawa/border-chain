@@ -67,18 +67,11 @@ var self = module.exports = {
     },
     /**
      * Encrypt the payload with destination public key.
-     * Hash the encrypted payload.
-     * Then, sign the message with the source private key.
-     * @param {string} payload          Payload to be encrypted and signed.
-     * @param {hex} destPublicKey       Key used to encrypt.
+     * @param {string} payloadHash      Hash of payload to be signed.
      * @param {hex} sourcePrivateKey    Key used to sign.
      */
-    encryptAndSignPayload: async function (payload, destPublicKey, sourcePrivateKey) {
-        const authEncrypted = await EthCrypto.encryptWithPublicKey(destPublicKey, payload);
-        const authEncryptedPayload = EthCrypto.cipher.stringify(authEncrypted);
-        const authPayloadHash = self.hashPayload(authEncryptedPayload);
-        const authSignature = EthCrypto.sign(sourcePrivateKey, authPayloadHash);
-        return [authSignature, authEncryptedPayload];
+    signPayload: function (payloadHash, sourcePrivateKey) {
+        return EthCrypto.sign(sourcePrivateKey, payloadHash);
     },
     /**
      * Recover the ethereum address from given signature.
@@ -87,6 +80,15 @@ var self = module.exports = {
      */
     recoverAddress: function (signature, hash) {
         return EthCrypto.recover(signature, hash);
+    },
+    /**
+     * Encrypt the payload with destination public key.
+     * @param {string} payload          Payload to be encrypted.
+     * @param {hex} destPublicKey       Key used to encrypt.
+     */
+    encryptPayload: async function (payload, destPublicKey) {
+        const encryptedPayload = await EthCrypto.encryptWithPublicKey(destPublicKey, payload);
+        return EthCrypto.cipher.stringify(encryptedPayload);
     },
     /**
      * Decrypt payload using source private key.
