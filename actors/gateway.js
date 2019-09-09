@@ -8,14 +8,13 @@ const tools = require('./actor_tools');
  */
 const vendorMapping = {
     'samsung': {
-        'address': tools.getVendorAddress(),
-        'publicKey': tools.getVendorPublicKey()
+        'address': tools.getVendorAddress()
     },
     'lg': {
-        'address': '0x0000abc',
-        'publicKey': '0x0001234'
+        'address': '0x0000abc'
     }
 };
+
 // setup parameters that are known by the gateway.
 const gatewayPrivateKey = tools.getGatewayPrivateKey();
 const gatewayAddress = tools.getGatewayAddress();
@@ -27,19 +26,18 @@ app.use(express.json());
 
 app.post('/authenticate', async (req, res) => {
     // get the payload from the http request
-    const authEncryptedPayload = req.body.authEncryptedPayload;
-    const authSignature = req.body.authSignature;
-    const deviceUUID = req.body.deviceUUID;
+    const offChainPayload = req.body.offChainPayload;
+    const authPayloadHash = req.body.authPayloadHash;
+    const deviceID = req.body.deviceID;
     const vendorID = req.body.vendorID;
     const nonce = req.body.nonce;
 
     // TODO: check the nonce
     if (typeof vendorMapping[vendorID] !== 'undefined') {
         let vendorAddress = vendorMapping[vendorID].address;
-        const authPayloadHash = tools.hashPayload(authEncryptedPayload);
 
         // sending transaction to register payload to the smart contract
-        let tx = await RC.methods.storeAuthNPayload(authPayloadHash, deviceUUID, vendorAddress).send({
+        let tx = await RC.methods.storeAuthNPayload(authPayloadHash, deviceID, vendorAddress).send({
             from: gatewayAddress,
             gas: 1000000
         });
@@ -53,10 +51,7 @@ app.post('/authenticate', async (req, res) => {
             let options = {
                 method: 'POST',
                 uri: tools.getVendorAuthnEndpoint(),
-                body: {
-                    authEncryptedPayload: authEncryptedPayload,
-                    authSignature: authSignature
-                },
+                body: {offChainPayload},
                 resolveWithFullResponse: true,
                 json: true // Automatically stringifies the body to JSON
             };
@@ -73,7 +68,6 @@ app.post('/authenticate', async (req, res) => {
                 res.status(500).send(err);
             });
         } else {
-            console.log('cannot store auth payload Tx to blockchain!');
             res.status(500).send('cannot store auth payload Tx to blockchain!');
         }
     } else {

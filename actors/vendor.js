@@ -7,7 +7,7 @@ const tools = require('./actor_tools');
  * manufacturing and then stored in database.
  */
 const storedData = {
-    deviceUUID: tools.getDeviceAddress(),
+    deviceID: tools.getDeviceAddress(),
     deviceSN: 'serial_number_1234'
 };
 // setup parameters that are known by the vendor.
@@ -21,10 +21,11 @@ app.use(express.json());
 
 app.post('/authenticate', async (req, res) => {
     // get the payload from the http request
-    const authEncryptedPayload = req.body.authEncryptedPayload;
-    const authSignature = req.body.authSignature;
+    const offChainPayload = req.body.offChainPayload;
 
-    const authPayloadHash = tools.hashPayload(authEncryptedPayload);
+    const stringForVendor = await tools.decryptPayload(offChainPayload, vendorPrivateKey);
+    const payloadForVendor = JSON.parse(stringForVendor);
+    const authPayloadHash = tools.hashPayload(payloadForVendor.authPayload);
     const payload = await RC.methods.getPayloadDetail(authPayloadHash).call({
         from: vendorAddress
     });
@@ -32,11 +33,11 @@ app.post('/authenticate', async (req, res) => {
     // payload isValue is true,
     // payload isVerified is false
     if (payload[2] == vendorAddress && payload[3] && !payload[4]) {
-        const signerAddress = tools.recoverAddress(authSignature, authPayloadHash);
+        const signerAddress = tools.recoverAddress(payloadForVendor.authSignature, authPayloadHash);
         // check if the signature is sign by the target of payload
         if (signerAddress == payload[1]) {
-            const authString = await tools.decryptPayload(authEncryptedPayload, vendorPrivateKey);
-            const auth = JSON.parse(authString);
+            const auth = JSON.parse(payloadForVendor.authPayload);
+            // TODO: checking auth.nonce in real production with database connection
             // check if serial number is correct
             if (auth.deviceSN == storedData.deviceSN) {
                 // sending transaction to varify payload

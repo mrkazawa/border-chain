@@ -42,6 +42,8 @@ app.post('/authenticate', async (req, res) => {
             const auth = JSON.parse(payloadForISP.authPayload);
 
             // TODO: checking auth.nonce in real production with database connection
+            // check if username & password exist in the database
+            // also chedk if the IP of the user is correct
             if (auth.username == storedData.username &&
                 auth.password == storedData.password &&
                 auth.routerIP == storedData.routerIP) {
