@@ -1,34 +1,47 @@
 {
-  "name": "iot_domain_auth",
-  "version": "1.0.0",
-  "description": "List of dependency: npm install -g truffle npm install -g ganache-cli npm install truffle-assertions npm i --save bs58 npm install --save web3 npm install eth-crypto --save",
-  "main": "truffle-config.js",
-  "directories": {
-    "test": "test"
-  },
+  "name": "nemesis",
+  "version": "0.1.0",
+  "description": "IoT domain access control using Ethereum smart contract",
+  "main": "",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "eth-network": "ganache-cli --host 10.0.0.51 --networkId 2020 --mnemonic dongseo",
+    "test": "jest && truffle test"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mrkazawa/iot_domain_auth.git"
+    "url": "git@github.com:mrkazawa/nemesis.git"
   },
-  "author": "",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/mrkazawa/iot_domain_auth/issues"
-  },
-  "homepage": "https://github.com/mrkazawa/iot_domain_auth#readme",
+  "keywords": [
+    "authentication",
+    "authorization",
+    "access-control",
+    "blockchain",
+    "iot-domain"
+  ],
+  "author": "Yustus Oktian",
+  "license": "MIT",
   "dependencies": {
+    "autocannon": "^4.6.0",
+    "axios": "^0.19.2",
+    "better-sqlite3": "^6.0.1",
+    "body-parser": "^1.19.0",
     "bs58": "^4.0.1",
+    "chalk": "^3.0.0",
     "eth-crypto": "^1.4.0",
     "express": "^4.17.1",
-    "ganache-cli": "^6.6.0",
-    "ipfs-http-client": "^33.1.1",
     "request": "^2.88.0",
     "request-promise-native": "^1.0.7",
-    "truffle": "^5.0.33",
     "truffle-assertions": "^0.9.1",
+    "uuid": "^3.3.2",
     "web3": "^1.2.1"
+  },
+  "devDependencies": {
+    "jest": "^25.4.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "coveragePathIgnorePatterns": [
+      "/node_modules/"
+    ]
   }
 }
