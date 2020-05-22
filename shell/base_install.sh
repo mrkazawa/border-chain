@@ -13,3 +13,7 @@ apt-get update
 
 apt-get install -y avahi-daemon libnss-mdns
 apt-get install -y sshpass
+
+# -------------------------------- For Crypto Stuff -------------------------------- #
+
+apt-get install -y build-essential g++

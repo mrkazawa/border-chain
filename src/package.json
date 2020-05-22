@@ -4,7 +4,10 @@
   "description": "IoT domain access control using Ethereum smart contract",
   "main": "",
   "scripts": {
-    "eth-network": "ganache-cli --host 10.0.0.51 --networkId 2020 --mnemonic dongseo",
+    "eth-network": "ganache-cli --host 10.0.0.56 --networkId 2020 --defaultBalanceEther 1000000 --mnemonic dongseo",
+    "admin": "truffle deploy && node actors/admin",
+    "owner": "node actors/owner",
+    "isp": "node actors/isp",
     "test": "jest && truffle test"
   },
   "repository": {

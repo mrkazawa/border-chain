@@ -2,22 +2,7 @@ const ethCrypto = require('eth-crypto');
 const crypto = require('crypto');
 const fs = require('fs');
 const axios = require('axios').default;
-const web3 = require('./web3');
-
-// the path to the preloaded info from ganache network
-const ownerPath = './ganache_files/owner.json';
-const ISPPath = './ganache_files/isp.json';
-const gatewayPath = './ganache_files/gateway.json';
-const devicePath = './ganache_files/device.json';
-const vendorPath = './ganache_files/vendor.json';
-const contractPath = './ganache_files/contract.json';
-const contractABIPath = '../build/contracts/RegistryContract.json';
-
-// the endpoints
-const ISPAuthnEndpoint = 'http://localhost:3000/authenticate';
-const vendorAuthnEndpoint = 'http://localhost:4000/authenticate';
-const gatewayAuthnEndpoint = 'http://localhost:5000/authenticate';
-const gatewayAuthzEndpoint = 'http://localhost:5000/authorize';
+const web3 = require('./utils/web3');
 
 // for symmetric encryption and decryption
 const algorithm = 'aes256';
@@ -44,7 +29,7 @@ class Tools {
   }
 
   static extractPublicKey(jsonObject) {
-    return EthCrypto.publicKeyByPrivateKey(jsonObject.privateKey);
+    return ethCrypto.publicKeyByPrivateKey(jsonObject.privateKey);
   }
 
   static extractAddress(jsonObject) {
@@ -111,6 +96,14 @@ class Tools {
     } catch (err) {
       return new Error(`Error sending request ${err}`);
     }
+  }
+
+  static convertStringToBase64(string) {
+    return Buffer.from(string).toString('base64');
+  }
+
+  static convertBase64ToString(base64) {
+    return Buffer.from(base64, 'base64').toString('ascii')
   }
 }
 
