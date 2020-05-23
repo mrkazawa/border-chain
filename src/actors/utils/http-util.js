@@ -1,4 +1,5 @@
 const axios = require('axios').default;
+const chalk = require('chalk');
 
 const {
   ISP_LIST_URL,
@@ -12,6 +13,7 @@ class HttpUtil {
     try {
       return await axios(options);
     } catch (err) {
+      console.log(chalk.red(`Error sending request ${err}`));
       throw new Error(`Error sending request ${err}`);
     }
   }
@@ -54,8 +56,7 @@ class HttpUtil {
     };
 
     const response = await HttpUtil.sendRequest(options);
-    const isps = response.data;
-    return isps[0];
+    return response.data;
   }
 
   static async registerISP(address, publicKey) {

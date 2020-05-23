@@ -13,8 +13,8 @@ const HTTP_PORT = process.env.HTTP_PORT || 3000;
  */
 const REGISTRY_CONTRACT = require('../build/contracts/RegistryContract.json');
 
-const verifiedIsps = [];
-const verifiedVendor = [];
+let verifiedIsp;
+let verifiedVendor;
 
 const app = express();
 app.use(bodyParser.json());
@@ -23,7 +23,7 @@ app.use(bodyParser.json());
 app.get('/contract-abi', (req, res) => res.send(REGISTRY_CONTRACT));
 
 // GET list of verified ISPs
-app.get('/isp', (req, res) => res.send(verifiedIsps));
+app.get('/isp', (req, res) => res.send(verifiedIsp));
 
 // GET list of verified IoT vendors
 app.get('/vendor', (req, res) => res.send(verifiedVendor));
@@ -36,7 +36,7 @@ app.post('/isp', (req, res) => {
     (typeof isp.address !== 'undefined' && isp.address) &&
     (typeof isp.publicKey !== 'undefined' && isp.publicKey)
   ) {
-    verifiedIsps.push(isp);
+    verifiedIsp = isp;
     res.send(`New ISP ${isp.address} is registered`);
     
   } else {
@@ -52,7 +52,7 @@ app.post('/vendor', (req, res) => {
     (typeof vendor.address !== 'undefined' && vendor.address) &&
     (typeof vendor.publicKey !== 'undefined' && vendor.publicKey)
   ) {
-    verifiedVendor.push(vendor);
+    verifiedVendor = vendor;
     res.send(`New IoT vendor ${vendor.address} is registered`);
     
   } else {

@@ -48,6 +48,10 @@ class CryptoUtil {
     const decrypted = await EthCrypto.decryptWithPrivateKey(privateKey, encrypted);
     return JSON.parse(decrypted);
   }
+
+  static signTransaction(privateKey, rawTx) {
+    return EthCrypto.signTransaction(rawTx, privateKey);
+  }
 }
 
 module.exports = CryptoUtil;

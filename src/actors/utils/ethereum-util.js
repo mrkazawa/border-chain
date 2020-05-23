@@ -16,6 +16,10 @@ class EthereumUtil {
     });
   }
 
+  static async sendTransaction(signedRawTx) {
+    return await web3.eth.sendSignedTransaction(signedRawTx);
+  }
+
   static async getBalance(address) {
     return await web3.eth.getBalance(address);
   }

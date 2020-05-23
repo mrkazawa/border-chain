@@ -24,7 +24,9 @@ const storedData = {
   routerIP: '200.100.10.10'
 };
 
-let RC; // global variable for deployed Registry Contract
+// global variable for deployed Registry Contract
+let RC;
+let contractAddress;
 const ISP = CryptoUtil.createNewIdentity();
 
 const app = express();
@@ -32,22 +34,22 @@ app.use(express.json());
 
 app.post('/authenticate', async (req, res) => {
   const offChainPayload = req.body.payload;
+  console.log(offChainPayload);
 
   const payloadForISP = await CryptoUtil.decryptPayload(ISP.privateKey, offChainPayload);
+  
   const auth = payloadForISP.authPayload;
   const authSignature = payloadForISP.authSignature;
   const authHash = CryptoUtil.hashPayload(auth);
 
-  const payload = await RC.methods.getPayloadDetail(authHash).call({
-    from: ispAddress
-  });
+  const payload = await RC.methods.getPayloadDetail(authHash).call();
   const source = payload[0];
   const verifier = payload[2];
   const isValue = payload[3];
   const isVerified = payload[4];
 
   if (verifier == ISP.address && isValue && !isVerified) {
-
+    
     const isValid = CryptoUtil.verifyPayload(authSignature, auth, source);
     if (isValid) {
       // TODO: checking auth.nonce in real production with database connection
@@ -59,20 +61,20 @@ app.post('/authenticate', async (req, res) => {
         auth.routerIP == storedData.routerIP
       ) {
         const routerIPInBytes = EthereumUtil.convertStringToByte(storedData.routerIP);
+        const verifyAuth =  RC.methods.verifyAuthNGateway(authHash, routerIPInBytes).encodeABI();
+        const verifyAuthTx = {
+          from: ISP.address,
+          to: contractAddress,
+          nonce: 0,
+          gasLimit: 5000000,
+          gasPrice: 5000000000,
+          data: verifyAuth
+        };
 
-        let tx = await RC.methods.verifyAuthNGateway(authHash, routerIPInBytes).send({
-          from: ISP.address
-        });
+        const signedVerifyAuthTx = CryptoUtil.signTransaction(ISP.privateKey, verifyAuthTx);
+        await EthereumUtil.sendTransaction(signedVerifyAuthTx);
 
-        const event = tx.events.GatewayVerified;
-        if (typeof event !== 'undefined' && event) {
-          console.log(chalk.yellow(`Verify Authn Tx from: ${event.returnValues['sender']}`));
-          console.log(chalk.yellow(`Authn for: ${event.returnValues['gateway']}`));
-
-          res.status(200).send('authentication attempt successful!');
-        } else {
-          res.status(500).send('cannot verify in blockchain!');
-        }
+        res.status(200).send('authentication attempt successful!');
       } else {
         res.status(403).send('invalid authentication payload!');
       }
@@ -99,7 +101,7 @@ async function prepare() {
   console.log(chalk.yellow(registered));
 
   const contractAbi = contract.abi;
-  const contractAddress = contract.networks[NETWORK_ID].address;
+  contractAddress = contract.networks[NETWORK_ID].address;
   RC = EthereumUtil.constructSmartContract(contractAbi, contractAddress);
 }
 

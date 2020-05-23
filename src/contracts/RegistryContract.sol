@@ -19,7 +19,7 @@ contract RegistryContract {
     mapping(address => address) trustedDevices;
 
     event NewPayloadAdded(address sender, bytes32 payloadHash);
-    event GatewayVerified(address sender, address gateway);
+    event GatewayVerified(address sender, bytes32 payloadHash, address gateway);
     event DeviceVerified(address sender, address gateway, address device);
     event GatewayRevoked(address sender, address gateway);
     event DeviceRevoked(address sender, address device);
@@ -99,7 +99,7 @@ contract RegistryContract {
         trustedGateways[payloads[payloadHash].target] = routerIP;
         payloads[payloadHash].isVerified = true;
 
-        emit GatewayVerified(msg.sender, payloads[payloadHash].target);
+        emit GatewayVerified(msg.sender, payloadHash, payloads[payloadHash].target);
     }
 
     function verifyAuthNDevice(bytes32 payloadHash)
