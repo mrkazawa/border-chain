@@ -1,3 +1,4 @@
+const autocannon = require('autocannon');
 const chalk = require('chalk');
 
 const CryptoUtil = require('../utils/crypto-util');
@@ -8,8 +9,13 @@ const PayloadDB = require('./db/auth-payload-db');
 const payloadDB = new PayloadDB();
 
 const {
-  NETWORK_ID
+  NETWORK_ID,
+  ISP_AUTHN_URL
 } = require('../utils/config');
+
+const isBenchmarking = () => {
+  return (process.env.BENCHMARKING == "true");
+};
 
 let RC; // global variable for deployed Registry Contract
 const OWNER = CryptoUtil.createNewIdentity();
@@ -84,8 +90,14 @@ async function sendAuthPayloadToIsp(auth, isp) {
     authSignature: authSignature
   };
   const offChainPayload = await CryptoUtil.encryptPayload(isp.publicKey, payloadForISP);
-  const result = await HttpUtil.sendAuthPayloadToIsp(offChainPayload);
-  console.log(result);
+
+  if (isBenchmarking()) {
+    benchmark(offChainPayload);
+
+  } else {
+    const result = await HttpUtil.sendAuthPayloadToIsp(offChainPayload);
+    console.log(result);
+  }
 }
 
 async function sendAuthPayloadToBlockchain(authHash, gatewayAddress, ispAddress, contractAddress) {
@@ -118,6 +130,55 @@ async function main() {
 
   payloadDB.insertNewPayload(authHash, GATEWAY.address, isp.address);
   await sendAuthPayloadToBlockchain(authHash, GATEWAY.address, isp.address, contractAddress);
+}
+
+function benchmark(payload) {
+  const instance = constructAutoCannonInstance('Owner send many Auth Payload to ISP', ISP_AUTHN_URL, payload);
+
+  autocannon.track(instance, {
+    renderProgressBar: true,
+    renderResultsTable: false,
+    renderLatencyTable: false,
+    progressBarString: `Running :percent | Elapsed :elapsed (seconds) | Rate :rate | ETA :eta (seconds)`
+  });
+  
+  instance.on('tick', (counter) => {
+    if (counter.counter == 0) {
+      console.log(chalk.redBright(`${instance.opts.title} WARN! requests possibly is not being processed`));
+    }
+  });
+  
+  instance.on('done', (results) => {
+    console.log(chalk.cyan(`${instance.opts.title} Results:`));
+    console.log(chalk.cyan(`Avg Tput (Req/sec): ${results.requests.average}`));
+    console.log(chalk.cyan(`Avg Lat (ms): ${results.latency.average}`));
+  });
+  
+  // this is used to kill the instance on CTRL-C
+  process.on('SIGINT', function() {
+    console.log( "\nGracefully shutting down from SIGINT (Ctrl-C)" );
+    instance.stop();
+  });
+}
+
+function constructAutoCannonInstance(title, url, payload) {
+  return autocannon({
+    title: title,
+    url: url,
+    method: 'POST',
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      payload: payload
+    }),
+    connections: 10,
+    pipelining: 1,
+    bailout: 1000,
+    //overallRate: 100, // rate of requests to make per second from all connections
+    amount: 1000,
+    duration: 1
+  }, console.log);
 }
 
 main();

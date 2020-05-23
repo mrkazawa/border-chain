@@ -14,13 +14,17 @@ const currentPayloadList = new NodeCache({
   checkperiod: 120
 });
 
+const {
+  NETWORK_ID
+} = require('../utils/config');
+
 const os = require("os");
 const HOSTNAME = os.hostname();
 const HTTP_PORT = process.env.HTTP_PORT || 3000;
 
-const {
-  NETWORK_ID
-} = require('../utils/config');
+const isBenchmarking = () => {
+  return (process.env.BENCHMARKING == "true");
+};
 
 // global variable for deployed Registry Contract
 let RC;
@@ -49,7 +53,7 @@ app.post('/authenticate', async (req, res) => {
 
     const isValid = CryptoUtil.verifyPayload(authSignature, auth, source);
     if (isValid) {
-      if (currentPayloadList.get(auth.nonce) == undefined) {
+      if (currentPayloadList.get(auth.nonce) == undefined || isBenchmarking()) {
         if (userDB.isUserValid(auth.username, auth.password, auth.routerIP)) {
 
           currentPayloadList.set(auth.nonce, authHash);
@@ -87,7 +91,7 @@ async function sendVerificationToBlockchain(authHash, routerIP) {
   };
 
   const signedVerifyAuthTx = CryptoUtil.signTransaction(ISP.privateKey, verifyAuthTx);
-  await EthereumUtil.sendTransaction(signedVerifyAuthTx);
+  if (!isBenchmarking()) await EthereumUtil.sendTransaction(signedVerifyAuthTx);
 
   TX_NONCE++;
 }
