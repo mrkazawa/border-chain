@@ -54,7 +54,7 @@ function addStoredPayloadEventListener(auth, isp) {
 
     if (sender == OWNER.address) {
       if (!payloadDB.isPayloadVerified(payloadHash)) {
-        sendAuthenticationToIsp(auth, isp);
+        sendAuthPayloadToIsp(auth, isp);
       }
     }
   });
@@ -77,7 +77,7 @@ function addGatewayVerifiedEventListener() {
   });
 }
 
-async function sendAuthenticationToIsp(auth, isp) {
+async function sendAuthPayloadToIsp(auth, isp) {
   const authSignature = CryptoUtil.signPayload(OWNER.privateKey, auth);
   const payloadForISP = {
     authPayload: auth,
@@ -86,6 +86,23 @@ async function sendAuthenticationToIsp(auth, isp) {
   const offChainPayload = await CryptoUtil.encryptPayload(isp.publicKey, payloadForISP);
   const result = await HttpUtil.sendAuthPayloadToIsp(offChainPayload);
   console.log(result);
+}
+
+async function sendAuthPayloadToBlockchain(authHash, gatewayAddress, ispAddress, contractAddress) {
+  const storeAuth = RC.methods.storeAuthNPayload(authHash, gatewayAddress, ispAddress).encodeABI();
+  const storeAuthTx = {
+    from: OWNER.address,
+    to: contractAddress,
+    nonce: TX_NONCE,
+    gasLimit: 5000000,
+    gasPrice: 5000000000,
+    data: storeAuth
+  };
+
+  const signedStoreAuthTx = CryptoUtil.signTransaction(OWNER.privateKey, storeAuthTx);
+  await EthereumUtil.sendTransaction(signedStoreAuthTx);
+
+  TX_NONCE++;
 }
 
 async function main() {
@@ -100,21 +117,7 @@ async function main() {
   addGatewayVerifiedEventListener();
 
   payloadDB.insertNewPayload(authHash, GATEWAY.address, isp.address);
-
-  const storeAuth =  RC.methods.storeAuthNPayload(authHash, GATEWAY.address, isp.address).encodeABI();
-  const storeAuthTx = {
-    from: OWNER.address,
-    to: contractAddress,
-    nonce: TX_NONCE,
-    gasLimit: 5000000,
-    gasPrice: 5000000000,
-    data: storeAuth
-  };
-
-  const signedStoreAuthTx = CryptoUtil.signTransaction(OWNER.privateKey, storeAuthTx);
-  await EthereumUtil.sendTransaction(signedStoreAuthTx);
-
-  TX_NONCE ++;
+  await sendAuthPayloadToBlockchain(authHash, GATEWAY.address, isp.address, contractAddress);
 }
 
 main();

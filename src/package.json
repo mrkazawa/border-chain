@@ -7,7 +7,7 @@
     "eth-network": "ganache-cli --host 10.0.0.56 --networkId 2020 --defaultBalanceEther 1000000 --mnemonic dongseo",
     "admin": "truffle deploy && node actors/admin",
     "owner": "node actors/domain-owner/owner",
-    "isp": "node actors/isp",
+    "isp": "node actors/isp/isp",
     "test": "jest && truffle test"
   },
   "repository": {
@@ -32,6 +32,7 @@
     "chalk": "^3.0.0",
     "eth-crypto": "^1.4.0",
     "express": "^4.17.1",
+    "node-cache": "^5.1.0",
     "truffle-assertions": "^0.9.1",
     "uuid": "^3.3.2",
     "web3": "^1.2.1"
