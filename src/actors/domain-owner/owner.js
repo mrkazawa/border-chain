@@ -1,18 +1,22 @@
 const chalk = require('chalk');
 
-const CryptoUtil = require('./utils/crypto-util');
-const EthereumUtil = require('./utils/ethereum-util');
-const HttpUtil = require('./utils/http-util');
+const CryptoUtil = require('../utils/crypto-util');
+const EthereumUtil = require('../utils/ethereum-util');
+const HttpUtil = require('../utils/http-util');
+
+const PayloadDB = require('./db/auth-payload-db');
+const payloadDB = new PayloadDB();
 
 const {
   NETWORK_ID
-} = require('./utils/config');
+} = require('../utils/config');
 
 let RC; // global variable for deployed Registry Contract
 const OWNER = CryptoUtil.createNewIdentity();
 const GATEWAY = CryptoUtil.createNewIdentity();
+let TX_NONCE = 0;
 
-function getAuthenticationPayload() {
+function createAuthenticationPayload() {
   // example of authentication payload for the ISP
   return {
     username: 'john',
@@ -49,8 +53,9 @@ function addStoredPayloadEventListener(auth, isp) {
     console.log(chalk.yellow(`Owner ${sender} has stored payload ${payloadHash}`));
 
     if (sender == OWNER.address) {
-      // TODO: Only send payload that has not been sent to ISP
-      sendAuthenticationToIsp(auth, isp);
+      if (!payloadDB.isPayloadVerified(payloadHash)) {
+        sendAuthenticationToIsp(auth, isp);
+      }
     }
   });
 }
@@ -66,7 +71,9 @@ function addGatewayVerifiedEventListener() {
     const gateway = event.returnValues['gateway'];
     console.log(chalk.yellow(`ISP ${sender} has verified payload ${payloadHash} for gateway ${gateway}`));
 
-    // TODO: Update status of payloadHash
+    if (payloadDB.isPayloadExist(payloadHash) && !payloadDB.isPayloadVerified(payloadHash)) {
+      payloadDB.changePayloadStatusToVerified(payloadHash);
+    }
   });
 }
 
@@ -86,17 +93,19 @@ async function main() {
   const isp = prepared[0];
   const contractAddress = prepared[1];
 
-  const auth = getAuthenticationPayload();
+  const auth = createAuthenticationPayload();
   const authHash = CryptoUtil.hashPayload(auth);
 
   addStoredPayloadEventListener(auth, isp);
   addGatewayVerifiedEventListener();
 
+  payloadDB.insertNewPayload(authHash, GATEWAY.address, isp.address);
+
   const storeAuth =  RC.methods.storeAuthNPayload(authHash, GATEWAY.address, isp.address).encodeABI();
   const storeAuthTx = {
     from: OWNER.address,
     to: contractAddress,
-    nonce: 0,
+    nonce: TX_NONCE,
     gasLimit: 5000000,
     gasPrice: 5000000000,
     data: storeAuth
@@ -104,6 +113,8 @@ async function main() {
 
   const signedStoreAuthTx = CryptoUtil.signTransaction(OWNER.privateKey, storeAuthTx);
   await EthereumUtil.sendTransaction(signedStoreAuthTx);
+
+  TX_NONCE ++;
 }
 
 main();

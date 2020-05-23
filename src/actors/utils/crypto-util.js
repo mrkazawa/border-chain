@@ -1,6 +1,5 @@
 const EthCrypto = require('eth-crypto');
 const crypto = require('crypto');
-//const web3 = require('./web3');
 
 // for symmetric encryption and decryption
 const algorithm = 'aes256';
@@ -51,6 +50,20 @@ class CryptoUtil {
 
   static signTransaction(privateKey, rawTx) {
     return EthCrypto.signTransaction(rawTx, privateKey);
+  }
+
+  static encryptSymmetrically(key, data) {
+    let cipher = crypto.createCipher(algorithm, key);
+    let ciphered = cipher.update(data, inputEncoding, outputEncoding);
+    ciphered += cipher.final(outputEncoding);
+    return ciphered;
+  }
+
+  static decryptSymmetrically(key, ciphered) {
+    let decipher = crypto.createDecipher(algorithm, key);
+    let deciphered = decipher.update(ciphered, outputEncoding, inputEncoding);
+    deciphered += decipher.final(inputEncoding);
+    return deciphered;
   }
 }
 

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 pragma solidity >=0.5.1;
 
 
@@ -99,7 +100,11 @@ contract RegistryContract {
         trustedGateways[payloads[payloadHash].target] = routerIP;
         payloads[payloadHash].isVerified = true;
 
-        emit GatewayVerified(msg.sender, payloadHash, payloads[payloadHash].target);
+        emit GatewayVerified(
+            msg.sender,
+            payloadHash,
+            payloads[payloadHash].target
+        );
     }
 
     function verifyAuthNDevice(bytes32 payloadHash)
@@ -153,7 +158,13 @@ contract RegistryContract {
     function getPayloadDetail(bytes32 payloadHash)
         public
         view
-        returns (address, address, address, bool, bool)
+        returns (
+            address,
+            address,
+            address,
+            bool,
+            bool
+        )
     {
         return (
             payloads[payloadHash].source,

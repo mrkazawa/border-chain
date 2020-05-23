@@ -28,6 +28,7 @@ const storedData = {
 let RC;
 let contractAddress;
 const ISP = CryptoUtil.createNewIdentity();
+let TX_NONCE = 0;
 
 const app = express();
 app.use(express.json());
@@ -49,7 +50,7 @@ app.post('/authenticate', async (req, res) => {
   const isVerified = payload[4];
 
   if (verifier == ISP.address && isValue && !isVerified) {
-    
+
     const isValid = CryptoUtil.verifyPayload(authSignature, auth, source);
     if (isValid) {
       // TODO: checking auth.nonce in real production with database connection
@@ -65,7 +66,7 @@ app.post('/authenticate', async (req, res) => {
         const verifyAuthTx = {
           from: ISP.address,
           to: contractAddress,
-          nonce: 0,
+          nonce: TX_NONCE,
           gasLimit: 5000000,
           gasPrice: 5000000000,
           data: verifyAuth
@@ -73,6 +74,8 @@ app.post('/authenticate', async (req, res) => {
 
         const signedVerifyAuthTx = CryptoUtil.signTransaction(ISP.privateKey, verifyAuthTx);
         await EthereumUtil.sendTransaction(signedVerifyAuthTx);
+
+        TX_NONCE ++;
 
         res.status(200).send('authentication attempt successful!');
       } else {
