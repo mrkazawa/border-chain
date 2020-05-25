@@ -1,3 +1,18 @@
+const workerFarm = require('worker-farm');
+
+const FARM_OPTIONS = {
+  maxConcurrentWorkers: require('os').cpus().length,
+  maxCallsPerWorker: Infinity,
+  maxConcurrentCallsPerWorker: 1
+};
+
+const workers = workerFarm(FARM_OPTIONS, require.resolve('./worker'), [
+  'signPayload',
+  'encryptPayload',
+  'decryptPayload',
+  'signTransaction'
+]);
+
 const {
   performance
 } = require('perf_hooks');
@@ -26,6 +41,8 @@ let ENCRYPTED;
 let RC;
 let CURRENT_MODE;
 let TX_NONCE = 0;
+
+let counter = 0;
 
 async function prepareContract() {
   const contract = await HttpUtil.getContractAbi();
@@ -61,55 +78,59 @@ async function run(mode) {
     ENCRYPTED = await CryptoUtil.encryptPayload(OWNER.publicKey, AUTH);
   }
 
-  let counter = 0;
   const start = performance.now();
 
   for (let i = 0; i < NUMBER_OF_EPOCH; i++) {
 
     if (mode == OPERATION.SIGN_PAYLOAD) {
-      const signed = await CryptoUtil.signPayload(OWNER.privateKey, AUTH);
-      if (!signed) {
-        throw new Error('Something wrong during operation!');
-      }
+      workers.signPayload(OWNER.privateKey, AUTH, function (err, signed) {
+        if (!signed) {
+          throw new Error('Something wrong during operation!');
+        }
+
+        closing(start);
+      });
 
     } else if (mode == OPERATION.ENCRYPT_PAYLOAD) {
-      const encyrpted = await CryptoUtil.encryptPayload(OWNER.publicKey, AUTH);
-      if (!encyrpted) {
-        throw new Error('Something wrong during operation!');
-      }
+      workers.encryptPayload(OWNER.publicKey, AUTH, function (err, encrypted) {
+        if (!encrypted) {
+          throw new Error('Something wrong during operation!');
+        }
+
+        closing(start);
+      });
 
     } else if (mode == OPERATION.DECRYPT_PAYLOAD) {
-      const decrypted = await CryptoUtil.decryptPayload(OWNER.privateKey, ENCRYPTED);
-      if (!decrypted) {
-        throw new Error('Something wrong during operation!');
-      }
+      workers.decryptPayload(OWNER.privateKey, ENCRYPTED, function (err, decrypted) {
+        if (!decrypted) {
+          throw new Error('Something wrong during operation!');
+        }
+
+        closing(start);
+      });
 
     } else if (mode == OPERATION.SIGN_TRANSACTION) {
       const storeAuth = RC.methods.storeAuthNPayload(AUTH_HASH, GATEWAY.address, ISP.address).encodeABI();
-      const storeAuthTx = {
-        from: OWNER.address,
-        to: contractAddress,
-        nonce: TX_NONCE,
-        gasLimit: 5000000,
-        gasPrice: 5000000000,
-        data: storeAuth
-      };
+      workers.signTransaction(OWNER.privateKey, OWNER.address, contractAddress, TX_NONCE, storeAuth, function (err, signed) {
+        if (!signed) {
+          throw new Error('Something wrong during operation!');
+        }
 
-      const signedStoreAuthTx = CryptoUtil.signTransaction(OWNER.privateKey, storeAuthTx);
-      if (!signedStoreAuthTx) {
-        throw new Error('Something wrong during operation!');
-      }
-
-      TX_NONCE++;
+        TX_NONCE++;
+        closing(start);
+      });
     }
+  }
+}
 
-    if (++counter == NUMBER_OF_EPOCH) {
-      const end = performance.now();
-      counter = 0;
+function closing(start) {
+  if (++counter == NUMBER_OF_EPOCH) {
+    workerFarm.end(workers);
+    const end = performance.now();
+    counter = 0;
 
-      console.log(`${CURRENT_MODE} ends in: ${end - start} milliseconds`);
-      process.exit(1); // kill, because the ethereum web socket always on!
-    }
+    console.log(`${CURRENT_MODE} ends in: ${end - start} milliseconds`);
+    process.exit(1); // kill, because the ethereum web socket always on!
   }
 }
 
