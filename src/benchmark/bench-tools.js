@@ -7,12 +7,6 @@ const CryptoUtil = require('../actors/utils/crypto-util');
 const NUMBER_OF_EPOCH = 10000;
 
 /**
- * How many times we run the benchmark.
- * This param is to get the average and standard deviation.
- */
-const NUMBER_OF_REPEAT = 10;
-
-/**
  * Mode of operations in our benchmark scenario.
  */
 const OPERATION = {
@@ -33,7 +27,6 @@ const createFakeIspPayload = function () {
 
 module.exports = {
   NUMBER_OF_EPOCH,
-  NUMBER_OF_REPEAT,
   OPERATION,
   createFakeIspPayload
 }
