@@ -2,19 +2,12 @@ const express = require('express');
 const chalk = require('chalk');
 const NodeCache = require("node-cache");
 
-const {
-  Worker,
-  isMainThread,
-  parentPort,
-  workerData
-} = require('worker_threads');
-
 const CryptoUtil = require('../utils/crypto-util');
 const EthereumUtil = require('../utils/ethereum-util');
 const HttpUtil = require('../utils/http-util');
 
-//const UserDB = require('./db/user-db');
-//const userDB = new UserDB();
+const UserDB = require('./db/user-db');
+const userDB = new UserDB();
 
 const currentPayloadList = new NodeCache({
   stdTTL: 100,
@@ -43,26 +36,9 @@ const app = express();
 app.use(express.json());
 
 app.post('/authenticate', async (req, res) => {
-  
-  if (isMainThread) {
-    const offChainPayload = req.body.payload;
+  const offChainPayload = req.body.payload;
 
-    const worker = new Worker('./actors/isp/worker.js', {
-      workerData: { encrypted: offChainPayload, privateKey: ISP.privateKey }
-    });
-    
-    worker.on('message', (msg) => {
-      console.log(msg);
-      res.status(200).send('authentication attempt successful!');
-    });
-
-    worker.on('error', (err) => {
-      console.log(err);
-    });
-
-  }
-
-  /*
+  const payloadForISP = await CryptoUtil.decryptPayload(ISP.privateKey, offChainPayload);
   const auth = payloadForISP.authPayload;
   const authSignature = payloadForISP.authSignature;
   const authHash = CryptoUtil.hashPayload(auth);
@@ -95,7 +71,7 @@ app.post('/authenticate', async (req, res) => {
     }
   } else {
     res.status(404).send('payload not found in blockchain!');
-  }*/
+  }
 });
 
 app.listen(HTTP_PORT, () => {
@@ -149,7 +125,7 @@ function insertMockUser() {
     routerIP: '200.100.10.10'
   };
 
-  //userDB.insertNewUser(mockUser.username, mockUser.password, mockUser.routerIP);
+  userDB.insertNewUser(mockUser.username, mockUser.password, mockUser.routerIP);
 }
 
 prepare();

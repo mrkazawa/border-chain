@@ -4,12 +4,13 @@
   "description": "IoT domain access control using Ethereum smart contract",
   "main": "",
   "scripts": {
-    "eth-network": "ganache-cli --host 10.0.0.56 --networkId 2020 --defaultBalanceEther 1000000 --mnemonic dongseo",
+    "eth-network": "ganache-cli --host 10.0.0.51 --networkId 2020 --defaultBalanceEther 1000000 --mnemonic dongseo",
     "admin": "truffle deploy && node actors/admin",
     "owner": "BENCHMARKING=false node actors/domain-owner/owner",
     "owner-benchmark": "BENCHMARKING=true node actors/domain-owner/owner",
-    "isp": "BENCHMARKING=false node actors/isp/isp",
-    "isp-benchmark": "BENCHMARKING=true node actors/isp/isp",
+    "isp": "BENCHMARKING=false node --experimental-worker actors/isp/isp",
+    "isp-benchmark": "BENCHMARKING=true node --experimental-worker actors/isp/isp",
+    "index": "node --experimental-worker actors/index",
     "test": "jest && truffle test"
   },
   "repository": {
@@ -37,7 +38,8 @@
     "node-cache": "^5.1.0",
     "truffle-assertions": "^0.9.1",
     "uuid": "^3.3.2",
-    "web3": "^1.2.1"
+    "web3": "^1.2.1",
+    "worker-farm": "^1.7.0"
   },
   "devDependencies": {
     "jest": "^25.4.0"

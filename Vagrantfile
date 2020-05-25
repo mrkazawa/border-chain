@@ -7,6 +7,7 @@
 BOX_IMAGE = "bento/ubuntu-16.04"
 BOX_MEMORY = "4096"
 BOX_CPU = 1
+SERVER_CPU = 16;
 
 ACTOR_COUNT = 6
 
@@ -21,7 +22,13 @@ Vagrant.configure("2") do |config|
       subconfig.vm.provider "virtualbox" do |vb|
         vb.name = "actor#{i}"
         vb.memory = BOX_MEMORY
-        vb.cpus = BOX_CPU
+
+        case ACTOR_COUNT
+        when 1
+          vb.cpus = BOX_CPU
+        when 4..6
+          vb.cpus = SERVER_CPU
+        end
       end
     end
   end
