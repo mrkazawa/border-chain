@@ -10,6 +10,17 @@ else
   # get the full path to this bash file
   DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 
+  # empty file
+  if [ "$MODE" == "1" ]; then
+    echo "" >sign-payload.csv
+  elif [ "$MODE" == "2" ]; then
+    echo "" >encrypt-payload.csv
+  elif [ "$MODE" == "3" ]; then
+    echo "" >decrypt-payload.csv
+  elif [ "$MODE" == "4" ]; then
+    echo "" >sign-transaction.csv
+  fi
+
   counter=1
   while [[ $counter -le $NUMBER_OF_ITERATION ]]; do
     node $DIR/operation $MODE

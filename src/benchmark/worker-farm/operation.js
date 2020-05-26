@@ -1,4 +1,5 @@
 const workerFarm = require('worker-farm');
+const fs = require('fs');
 
 const FARM_OPTIONS = {
   maxConcurrentWorkers: require('os').cpus().length,
@@ -56,16 +57,16 @@ async function prepareContract() {
 function assignCurrentMode(mode) {
   switch (mode) {
     case OPERATION.SIGN_PAYLOAD:
-      CURRENT_MODE = 'Sign Payload';
+      CURRENT_MODE = 'sign-payload';
       break;
     case OPERATION.ENCRYPT_PAYLOAD:
-      CURRENT_MODE = 'Encrypt Payload';
+      CURRENT_MODE = 'encrypt-payload';
       break;
     case OPERATION.DECRYPT_PAYLOAD:
-      CURRENT_MODE = 'Decrypt Payload';
+      CURRENT_MODE = 'decrypt-payload';
       break;
     case OPERATION.SIGN_TRANSACTION:
-      CURRENT_MODE = 'Sign Transaction';
+      CURRENT_MODE = 'sign-transaction';
       break;
   }
 }
@@ -129,7 +130,12 @@ function closing(start) {
     const end = performance.now();
     counter = 0;
 
-    console.log(`${CURRENT_MODE} ends in: ${end - start} milliseconds`);
+    const elapsed = end - start;
+
+    const row = elapsed + "\r\n";
+    fs.appendFileSync(`./${CURRENT_MODE}.csv`, row);
+
+    console.log(`${CURRENT_MODE} ends in: ${elapsed} milliseconds`);
     process.exit(1); // kill, because the ethereum web socket always on!
   }
 }
