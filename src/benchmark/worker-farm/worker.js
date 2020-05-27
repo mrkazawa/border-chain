@@ -5,6 +5,11 @@ const signPayload = function (privateKey, payload, callback) {
   callback(null, signed);
 }
 
+const verifyPayload = function (signature, payload, signer, callback) {
+  const verified = CryptoUtil.verifyPayload(signature, payload, signer);
+  callback(null, verified);
+}
+
 const encryptPayload = async function (publicKey, payload, callback) {
   const encrypted = await CryptoUtil.encryptPayload(publicKey, payload);
   callback(null, encrypted);
@@ -31,6 +36,7 @@ const signTransaction = async function (privateKey, sourceAddress, destinationAd
 
 module.exports = {
   signPayload,
+  verifyPayload,
   encryptPayload,
   decryptPayload,
   signTransaction

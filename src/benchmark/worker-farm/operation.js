@@ -4,14 +4,16 @@ const fs = require('fs');
 const FARM_OPTIONS = {
   maxConcurrentWorkers: require('os').cpus().length,
   maxCallsPerWorker: Infinity,
-  maxConcurrentCallsPerWorker: 1
+  maxConcurrentCallsPerWorker: Infinity
 };
 
 const workers = workerFarm(FARM_OPTIONS, require.resolve('./worker'), [
   'signPayload',
+  'verifyPayload',
   'encryptPayload',
   'decryptPayload',
-  'signTransaction'
+  'signTransaction',
+  'verifyTransaction'
 ]);
 
 const {
@@ -39,6 +41,10 @@ const AUTH = createFakeIspPayload();
 const AUTH_HASH = CryptoUtil.hashPayload(AUTH);
 
 let ENCRYPTED;
+let SIGNED_PAYLOAD;
+let AUTH_TX;
+let SIGNED_TX;
+
 let RC;
 let CURRENT_MODE;
 let TX_NONCE = 0;
@@ -59,6 +65,9 @@ function assignCurrentMode(mode) {
     case OPERATION.SIGN_PAYLOAD:
       CURRENT_MODE = 'sign-payload';
       break;
+    case OPERATION.VERIFY_PAYLOAD:
+      CURRENT_MODE = 'verify-payload';
+      break;
     case OPERATION.ENCRYPT_PAYLOAD:
       CURRENT_MODE = 'encrypt-payload';
       break;
@@ -68,6 +77,9 @@ function assignCurrentMode(mode) {
     case OPERATION.SIGN_TRANSACTION:
       CURRENT_MODE = 'sign-transaction';
       break;
+    case OPERATION.VERIFY_TRANSACTION:
+      CURRENT_MODE = 'verify-transaction';
+      break;
   }
 }
 
@@ -75,8 +87,24 @@ async function run(mode) {
   assignCurrentMode(mode);
   const contractAddress = await prepareContract();
 
-  if (mode == OPERATION.DECRYPT_PAYLOAD) {
+  if (mode == OPERATION.VERIFY_PAYLOAD) {
+    SIGNED_PAYLOAD = CryptoUtil.signPayload(OWNER.privateKey, AUTH);
+
+  } else if (mode == OPERATION.DECRYPT_PAYLOAD) {
     ENCRYPTED = await CryptoUtil.encryptPayload(OWNER.publicKey, AUTH);
+
+  } else if (mode == OPERATION.VERIFY_TRANSACTION) {
+    const auth = RC.methods.storeAuthNPayload(AUTH_HASH, GATEWAY.address, ISP.address).encodeABI();
+    AUTH_TX = {
+      from: OWNER.address,
+      to: contractAddress,
+      nonce: TX_NONCE,
+      gasLimit: 5000000,
+      gasPrice: 5000000000,
+      data: auth
+    };
+
+    SIGNED_TX = CryptoUtil.signTransaction(OWNER.privateKey, AUTH_TX);
   }
 
   const start = performance.now();
@@ -86,6 +114,15 @@ async function run(mode) {
     if (mode == OPERATION.SIGN_PAYLOAD) {
       workers.signPayload(OWNER.privateKey, AUTH, function (err, signed) {
         if (!signed) {
+          throw new Error('Something wrong during operation!');
+        }
+
+        closing(start);
+      });
+
+    } else if (mode == OPERATION.VERIFY_PAYLOAD) {
+      workers.verifyPayload(SIGNED_PAYLOAD, AUTH, OWNER.address, function (err, verified) {
+        if (!verified) {
           throw new Error('Something wrong during operation!');
         }
 
@@ -120,6 +157,9 @@ async function run(mode) {
         TX_NONCE++;
         closing(start);
       });
+
+    } else if (mode == OPERATION.VERIFY_TRANSACTION) {
+
     }
   }
 }

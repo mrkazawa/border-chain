@@ -4,16 +4,18 @@ const CryptoUtil = require('../actors/utils/crypto-util');
  * How many times we do the performed operations.
  * Whether it is sign, verify, encrypt, decrypt, write, or call.
  */
-const NUMBER_OF_EPOCH = 10000;
+const NUMBER_OF_EPOCH = 100000;
 
 /**
  * Mode of operations in our benchmark scenario.
  */
 const OPERATION = {
   SIGN_PAYLOAD: 1,
-  ENCRYPT_PAYLOAD: 2,
-  DECRYPT_PAYLOAD: 3,
-  SIGN_TRANSACTION: 4
+  VERIFY_PAYLOAD: 2,
+  ENCRYPT_PAYLOAD: 3,
+  DECRYPT_PAYLOAD: 4,
+  SIGN_TRANSACTION: 5,
+  VERIFY_TRANSACTION: 6
 };
 
 const createFakeIspPayload = function () {
