@@ -14,8 +14,7 @@ const OPERATION = {
   VERIFY_PAYLOAD: 2,
   ENCRYPT_PAYLOAD: 3,
   DECRYPT_PAYLOAD: 4,
-  SIGN_TRANSACTION: 5,
-  VERIFY_TRANSACTION: 6
+  SIGN_TRANSACTION: 5
 };
 
 const createFakeIspPayload = function () {

@@ -12,8 +12,7 @@ const workers = workerFarm(FARM_OPTIONS, require.resolve('./worker'), [
   'verifyPayload',
   'encryptPayload',
   'decryptPayload',
-  'signTransaction',
-  'verifyTransaction'
+  'signTransaction'
 ]);
 
 const {
@@ -43,7 +42,6 @@ const AUTH_HASH = CryptoUtil.hashPayload(AUTH);
 let ENCRYPTED;
 let SIGNED_PAYLOAD;
 let AUTH_TX;
-let SIGNED_TX;
 
 let RC;
 let CURRENT_MODE;
@@ -77,34 +75,19 @@ function assignCurrentMode(mode) {
     case OPERATION.SIGN_TRANSACTION:
       CURRENT_MODE = 'sign-transaction';
       break;
-    case OPERATION.VERIFY_TRANSACTION:
-      CURRENT_MODE = 'verify-transaction';
-      break;
   }
 }
 
 async function run(mode) {
   assignCurrentMode(mode);
   const contractAddress = await prepareContract();
+  const storeAuth = RC.methods.storeAuthNPayload(AUTH_HASH, GATEWAY.address, ISP.address).encodeABI();
 
   if (mode == OPERATION.VERIFY_PAYLOAD) {
     SIGNED_PAYLOAD = CryptoUtil.signPayload(OWNER.privateKey, AUTH);
 
   } else if (mode == OPERATION.DECRYPT_PAYLOAD) {
     ENCRYPTED = await CryptoUtil.encryptPayload(OWNER.publicKey, AUTH);
-
-  } else if (mode == OPERATION.VERIFY_TRANSACTION) {
-    const auth = RC.methods.storeAuthNPayload(AUTH_HASH, GATEWAY.address, ISP.address).encodeABI();
-    AUTH_TX = {
-      from: OWNER.address,
-      to: contractAddress,
-      nonce: TX_NONCE,
-      gasLimit: 5000000,
-      gasPrice: 5000000000,
-      data: auth
-    };
-
-    SIGNED_TX = CryptoUtil.signTransaction(OWNER.privateKey, AUTH_TX);
   }
 
   const start = performance.now();
@@ -148,7 +131,6 @@ async function run(mode) {
       });
 
     } else if (mode == OPERATION.SIGN_TRANSACTION) {
-      const storeAuth = RC.methods.storeAuthNPayload(AUTH_HASH, GATEWAY.address, ISP.address).encodeABI();
       workers.signTransaction(OWNER.privateKey, OWNER.address, contractAddress, TX_NONCE, storeAuth, function (err, signed) {
         if (!signed) {
           throw new Error('Something wrong during operation!');
@@ -157,9 +139,6 @@ async function run(mode) {
         TX_NONCE++;
         closing(start);
       });
-
-    } else if (mode == OPERATION.VERIFY_TRANSACTION) {
-
     }
   }
 }
