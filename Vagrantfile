@@ -6,17 +6,17 @@
 
 BOX_IMAGE = "bento/ubuntu-16.04"
 BOX_MEMORY = "4096"
-BOX_CPU = 4
+BOX_CPU = 8
 
-ACTOR_COUNT = 6
+NODE_COUNT = 6
 
 Vagrant.configure("2") do |config|
-  (1..ACTOR_COUNT).each do |i|
+  (1..NODE_COUNT).each do |i|
     config.vm.define "actor#{i}" do |subconfig|
       subconfig.vm.box = BOX_IMAGE
       subconfig.vm.box_check_update = true
       subconfig.vm.hostname = "actor#{i}"
-      subconfig.vm.network :private_network, ip: "10.0.0.#{i + 50}"
+      subconfig.vm.network :private_network, ip: "10.0.0.#{i + 10}"
 
       subconfig.vm.provider "virtualbox" do |vb|
         vb.name = "actor#{i}"

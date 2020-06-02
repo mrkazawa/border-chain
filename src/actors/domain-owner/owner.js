@@ -176,8 +176,7 @@ function constructAutoCannonInstance(title, url, payload) {
     pipelining: 1,
     bailout: 1000,
     //overallRate: 100, // rate of requests to make per second from all connections
-    amount: 1000,
-    duration: 1
+    duration: 20
   }, console.log);
 }
 

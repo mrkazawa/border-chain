@@ -19,8 +19,8 @@ contract RegistryContract {
     // key: device address, value: current gateway address
     mapping(address => address) trustedDevices;
 
-    event NewPayloadAdded(address sender, bytes32 payloadHash);
-    event GatewayVerified(address sender, bytes32 payloadHash, address gateway);
+    event NewPayloadAdded(address sender, bytes32 payloadHash, address target, address verifier);
+    event GatewayVerified(address sender, bytes32 payloadHash, address gateway, address verifier);
     event DeviceVerified(address sender, address gateway, address device);
     event GatewayRevoked(address sender, address gateway);
     event DeviceRevoked(address sender, address device);
@@ -88,7 +88,7 @@ contract RegistryContract {
         p.isValue = true;
         p.isVerified = false;
 
-        emit NewPayloadAdded(msg.sender, payloadHash);
+        emit NewPayloadAdded(msg.sender, payloadHash, target, verifier);
     }
 
     function verifyAuthNGateway(bytes32 payloadHash, bytes32 routerIP)
@@ -103,7 +103,8 @@ contract RegistryContract {
         emit GatewayVerified(
             msg.sender,
             payloadHash,
-            payloads[payloadHash].target
+            payloads[payloadHash].target,
+            payloads[payloadHash].verifier
         );
     }
 

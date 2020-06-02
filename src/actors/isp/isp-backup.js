@@ -1,21 +1,6 @@
 const express = require('express');
 const chalk = require('chalk');
 const NodeCache = require("node-cache");
-const workerFarm = require('worker-farm');
-
-const FARM_OPTIONS = {
-  maxConcurrentWorkers: require('os').cpus().length,
-  maxCallsPerWorker: Infinity,
-  maxConcurrentCallsPerWorker: Infinity
-};
-
-const workers = workerFarm(FARM_OPTIONS, require.resolve('./worker'), [
-  'signPayload',
-  'verifyPayload',
-  'encryptPayload',
-  'decryptPayload',
-  'signTransaction'
-]);
 
 const CryptoUtil = require('../utils/crypto-util');
 const EthereumUtil = require('../utils/ethereum-util');
@@ -26,12 +11,6 @@ const userDB = new UserDB();
 
 const currentPayloadList = new NodeCache({
   stdTTL: 100,
-  checkperiod: 120
-});
-
-// key is payloadhash, value is senderAddress
-const pendingAuthList = new NodeCache({
-  stdTTL: 600,
   checkperiod: 120
 });
 
@@ -59,23 +38,20 @@ app.use(express.json());
 app.post('/authenticate', async (req, res) => {
   const offChainPayload = req.body.payload;
 
-  workers.decryptPayload(ISP.privateKey, offChainPayload, async function (err, decrypted) {
-    if (!decrypted) {
-      throw new Error('Something wrong during operation!');
-    }
+  const payloadForISP = await CryptoUtil.decryptPayload(ISP.privateKey, offChainPayload);
+  const auth = payloadForISP.authPayload;
+  const authSignature = payloadForISP.authSignature;
+  const authHash = CryptoUtil.hashPayload(auth);
 
-    const payloadForISP = decrypted;
+  const payload = await RC.methods.getPayloadDetail(authHash).call();
+  const source = payload[0];
+  const verifier = payload[2];
+  const isValue = payload[3];
+  const isVerified = payload[4];
 
-    const auth = payloadForISP.authPayload;
-    const authSignature = payloadForISP.authSignature;
-    const authHash = CryptoUtil.hashPayload(auth);
+  if (verifier == ISP.address && isValue && !isVerified) {
 
-    const sender = pendingAuthList.get(authHash);
-    if (sender == undefined) {
-      return res.status(404).send('payload not found!');
-    }
-  
-    const isValid = CryptoUtil.verifyPayload(authSignature, auth, sender);
+    const isValid = CryptoUtil.verifyPayload(authSignature, auth, source);
     if (isValid) {
       if (currentPayloadList.get(auth.nonce) == undefined || isBenchmarking()) {
         if (userDB.isUserValid(auth.username, auth.password, auth.routerIP)) {
@@ -88,13 +64,14 @@ app.post('/authenticate', async (req, res) => {
           res.status(403).send('invalid authentication payload!');
         }
       } else {
-        console.log('you are replaying, we already process this auth payload!');
         res.status(403).send('you are replaying, we already process this auth payload!');
       }
     } else {
       res.status(403).send('invalid signature!');
     }
-  });
+  } else {
+    res.status(404).send('payload not found in blockchain!');
+  }
 });
 
 app.listen(HTTP_PORT, () => {
@@ -119,23 +96,6 @@ async function sendVerificationToBlockchain(authHash, routerIP) {
   TX_NONCE++;
 }
 
-function addStoredPayloadEventListener() {
-  RC.events.NewPayloadAdded({
-    fromBlock: 0
-  }, function (error, event) {
-    if (error) console.log(chalk.red(error));
-
-    const sender = event.returnValues['sender'];
-    const payloadHash = event.returnValues['payloadHash'];
-    const verifier = event.returnValues['verifier'];
-
-    if (verifier == ISP.address) {
-      pendingAuthList.set(payloadHash, sender);
-      console.log(`adding ${payloadHash} to cache`);
-    }
-  });
-}
-
 async function prepare() {
   const [assigned, registered, contract] = await Promise.all([
     HttpUtil.assignEther(ISP.address),
@@ -146,12 +106,11 @@ async function prepare() {
   console.log(chalk.yellow(assigned));
   console.log(chalk.yellow(registered));
 
+  insertMockUser();
+
   const contractAbi = contract.abi;
   CONTRACT_ADDRESS = contract.networks[NETWORK_ID].address;
   RC = EthereumUtil.constructSmartContract(contractAbi, CONTRACT_ADDRESS);
-
-  insertMockUser();
-  addStoredPayloadEventListener();
 }
 
 function insertMockUser() {
