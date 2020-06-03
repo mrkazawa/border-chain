@@ -8,15 +8,13 @@ const FARM_OPTIONS = {
   maxConcurrentCallsPerWorker: Infinity
 };
 
-const workers = workerFarm(FARM_OPTIONS, require.resolve('./worker'), [
+const workers = workerFarm(FARM_OPTIONS, require.resolve('../worker'), [
   'signPayload',
   'verifyPayload',
   'encryptPayload',
   'decryptPayload',
   'signTransaction'
 ]);
-
-const CryptoUtil = require('../../actors/utils/crypto-util');
 
 const os = require("os");
 const HOSTNAME = os.hostname();

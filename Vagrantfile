@@ -11,6 +11,9 @@ BOX_CPU = 8
 NODE_COUNT = 6
 
 Vagrant.configure("2") do |config|
+  config.ssh.compression = false
+  config.ssh.keep_alive = true
+
   (1..NODE_COUNT).each do |i|
     config.vm.define "actor#{i}" do |subconfig|
       subconfig.vm.box = BOX_IMAGE
@@ -25,9 +28,6 @@ Vagrant.configure("2") do |config|
       end
     end
   end
-
-  config.ssh.compression = false
-  config.ssh.keep_alive = true
 
   # Installation (WARNING! the order matters)
   config.vm.provision "shell", path: "shell/base_install.sh", privileged: true

@@ -8,7 +8,7 @@ const FARM_OPTIONS = {
   maxConcurrentCallsPerWorker: Infinity
 };
 
-const workers = workerFarm(FARM_OPTIONS, require.resolve('./worker'), [
+const workers = workerFarm(FARM_OPTIONS, require.resolve('../worker'), [
   'signPayload',
   'verifyPayload',
   'encryptPayload',
@@ -34,8 +34,6 @@ app.post('/', async function (req, res) {
 
     const auth = decrypted.authPayload;
     const authSignature = decrypted.authSignature;
-
-    //console.log(auth);
 
     res.status(200).send('authentication attempt successful!');
   });

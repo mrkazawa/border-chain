@@ -7,7 +7,7 @@ const FARM_OPTIONS = {
   maxConcurrentCallsPerWorker: Infinity
 };
 
-const workers = workerFarm(FARM_OPTIONS, require.resolve('./worker'), [
+const workers = workerFarm(FARM_OPTIONS, require.resolve('../worker'), [
   'signPayload',
   'verifyPayload',
   'encryptPayload',
@@ -24,8 +24,8 @@ const EthereumUtil = require('../../actors/utils/ethereum-util');
 const HttpUtil = require('../../actors/utils/http-util');
 
 const {
-  NETWORK_ID
-} = require('../../actors/utils/config');
+  ETH_NETWORK_ID
+} = require('../../actors/config');
 
 const {
   NUMBER_OF_EPOCH,
@@ -41,7 +41,6 @@ const AUTH_HASH = CryptoUtil.hashPayload(AUTH);
 
 let ENCRYPTED;
 let SIGNED_PAYLOAD;
-let AUTH_TX;
 
 let RC;
 let CURRENT_MODE;
@@ -52,7 +51,7 @@ let counter = 0;
 async function prepareContract() {
   const contract = await HttpUtil.getContractAbi();
   const contractAbi = contract.abi;
-  const contractAddress = contract.networks[NETWORK_ID].address;
+  const contractAddress = contract.networks[ETH_NETWORK_ID].address;
   RC = EthereumUtil.constructSmartContract(contractAbi, contractAddress);
 
   return contractAddress;

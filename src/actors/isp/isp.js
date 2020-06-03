@@ -37,7 +37,7 @@ const pendingAuthList = new NodeCache({
 
 const {
   NETWORK_ID
-} = require('../utils/config');
+} = require('../config');
 
 const os = require("os");
 const HOSTNAME = os.hostname();
@@ -124,6 +124,8 @@ function addStoredPayloadEventListener() {
     fromBlock: 0
   }, function (error, event) {
     if (error) console.log(chalk.red(error));
+
+    console.log(`i got event: ${event}`);
 
     const sender = event.returnValues['sender'];
     const payloadHash = event.returnValues['payloadHash'];

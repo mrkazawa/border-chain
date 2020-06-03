@@ -2,11 +2,11 @@ const axios = require('axios').default;
 const chalk = require('chalk');
 
 const {
-  ISP_LIST_URL,
-  ABI_URL,
-  ETHER_URL,
+  ADMIN_GET_ISP_LIST_URL,
+  ADMIN_GET_ABI_URL,
+  ADMIN_SEED_ETHER_URL,
   ISP_AUTHN_URL
-} = require('./config');
+} = require('../config');
 
 class HttpUtil {
   static async sendRequest(options) {
@@ -29,7 +29,7 @@ class HttpUtil {
   static async getContractAbi() {
     const options = {
       method: 'get',
-      url: ABI_URL
+      url: ADMIN_GET_ABI_URL
     };
 
     const response = await HttpUtil.sendRequest(options);
@@ -39,7 +39,7 @@ class HttpUtil {
   static async assignEther(address) {
     const options = {
       method: 'post',
-      url: ETHER_URL,
+      url: ADMIN_SEED_ETHER_URL,
       data: {
         address: address
       }
@@ -52,7 +52,7 @@ class HttpUtil {
   static async getIspInfo() {
     const options = {
       method: 'get',
-      url: ISP_LIST_URL
+      url: ADMIN_GET_ISP_LIST_URL
     };
 
     const response = await HttpUtil.sendRequest(options);
@@ -62,7 +62,7 @@ class HttpUtil {
   static async registerISP(address, publicKey) {
     const options = {
       method: 'post',
-      url: ISP_LIST_URL,
+      url: ADMIN_GET_ISP_LIST_URL,
       data: {
         address: address,
         publicKey: publicKey

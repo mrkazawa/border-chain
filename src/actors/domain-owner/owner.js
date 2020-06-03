@@ -9,9 +9,9 @@ const PayloadDB = require('./db/auth-payload-db');
 const payloadDB = new PayloadDB();
 
 const {
-  NETWORK_ID,
+  ETH_NETWORK_ID,
   ISP_AUTHN_URL
-} = require('../utils/config');
+} = require('../config');
 
 const isBenchmarking = () => {
   return (process.env.BENCHMARKING == "true");
@@ -42,7 +42,7 @@ async function prepare() {
   console.log(chalk.yellow(assigned));
 
   const contractAbi = contract.abi;
-  const contractAddress = contract.networks[NETWORK_ID].address;
+  const contractAddress = contract.networks[ETH_NETWORK_ID].address;
   RC = EthereumUtil.constructSmartContract(contractAbi, contractAddress);
 
   return [isp, contractAddress];
@@ -53,6 +53,8 @@ function addStoredPayloadEventListener(auth, isp) {
     fromBlock: 0
   }, function (error, event) {
     if (error) console.log(chalk.red(error));
+
+    console.log(`i got event: ${event}`);
 
     const sender = event.returnValues['sender'];
     const payloadHash = event.returnValues['payloadHash'];

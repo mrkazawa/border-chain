@@ -1,6 +1,13 @@
-const express = require('express');
+var cluster = require('cluster');
+var express = require('express');
+const bodyParser = require('body-parser');
 const chalk = require('chalk');
 const NodeCache = require("node-cache");
+
+const os = require('os');
+var NUM_CPUS =os.cpus().length;
+const HOSTNAME = os.hostname();
+const HTTP_PORT = process.env.HTTP_PORT || 5000;
 
 const CryptoUtil = require('../utils/crypto-util');
 const EthereumUtil = require('../utils/ethereum-util');
@@ -14,13 +21,15 @@ const currentPayloadList = new NodeCache({
   checkperiod: 120
 });
 
+// key is payloadhash, value is senderAddress
+const pendingAuthList = new NodeCache({
+  stdTTL: 600,
+  checkperiod: 120
+});
+
 const {
   NETWORK_ID
 } = require('../config');
-
-const os = require("os");
-const HOSTNAME = os.hostname();
-const HTTP_PORT = process.env.HTTP_PORT || 3000;
 
 const isBenchmarking = () => {
   return (process.env.BENCHMARKING == "true");
@@ -32,26 +41,31 @@ let CONTRACT_ADDRESS;
 const ISP = CryptoUtil.createNewIdentity();
 let TX_NONCE = 0;
 
-const app = express();
-app.use(express.json());
+if (cluster.isMaster) {
+  for (var i = 0; i < NUM_CPUS; i++) {
+    // Create a worker
+    cluster.fork();
+  }
 
-app.post('/authenticate', async (req, res) => {
-  const offChainPayload = req.body.payload;
+} else {
+  // Workers share the TCP connection in this server
+  const app = express();
+  app.use(bodyParser.json());
 
-  const payloadForISP = await CryptoUtil.decryptPayload(ISP.privateKey, offChainPayload);
-  const auth = payloadForISP.authPayload;
-  const authSignature = payloadForISP.authSignature;
-  const authHash = CryptoUtil.hashPayload(auth);
+  app.post('/authenticate', async (req, res) => {
+    const offChainPayload = req.body.payload;
+  
+    const payloadForISP = await CryptoUtil.decryptPayload(ISP.privateKey, offChainPayload);
+    const auth = payloadForISP.authPayload;
+    const authSignature = payloadForISP.authSignature;
+    const authHash = CryptoUtil.hashPayload(auth);
 
-  const payload = await RC.methods.getPayloadDetail(authHash).call();
-  const source = payload[0];
-  const verifier = payload[2];
-  const isValue = payload[3];
-  const isVerified = payload[4];
-
-  if (verifier == ISP.address && isValue && !isVerified) {
-
-    const isValid = CryptoUtil.verifyPayload(authSignature, auth, source);
+    const sender = pendingAuthList.get(authHash);
+    if (sender == undefined) {
+      return res.status(404).send('payload not found!');
+    }
+  
+    const isValid = CryptoUtil.verifyPayload(authSignature, auth, sender);
     if (isValid) {
       if (currentPayloadList.get(auth.nonce) == undefined || isBenchmarking()) {
         if (userDB.isUserValid(auth.username, auth.password, auth.routerIP)) {
@@ -64,18 +78,22 @@ app.post('/authenticate', async (req, res) => {
           res.status(403).send('invalid authentication payload!');
         }
       } else {
+        console.log('you are replaying, we already process this auth payload!');
         res.status(403).send('you are replaying, we already process this auth payload!');
       }
     } else {
       res.status(403).send('invalid signature!');
     }
-  } else {
-    res.status(404).send('payload not found in blockchain!');
-  }
-});
+  });
+  
+  app.listen(HTTP_PORT, () => {
+    console.log(`Hit me up on ${HOSTNAME}.local:${HTTP_PORT}`);
+  });
+}
 
-app.listen(HTTP_PORT, () => {
-  console.log(`Hit me up on ${HOSTNAME}.local:${HTTP_PORT}`);
+cluster.on('exit', function(worker, code, signal) {
+  console.log('Worker %d died with code/signal %s. Restarting worker...', worker.process.pid, signal || code);
+  cluster.fork();
 });
 
 async function sendVerificationToBlockchain(authHash, routerIP) {
@@ -96,6 +114,23 @@ async function sendVerificationToBlockchain(authHash, routerIP) {
   TX_NONCE++;
 }
 
+function addStoredPayloadEventListener() {
+  RC.events.NewPayloadAdded({
+    fromBlock: 0
+  }, function (error, event) {
+    if (error) console.log(chalk.red(error));
+
+    const sender = event.returnValues['sender'];
+    const payloadHash = event.returnValues['payloadHash'];
+    const verifier = event.returnValues['verifier'];
+
+    if (verifier == ISP.address) {
+      pendingAuthList.set(payloadHash, sender);
+      console.log(`adding ${payloadHash} to cache`);
+    }
+  });
+}
+
 async function prepare() {
   const [assigned, registered, contract] = await Promise.all([
     HttpUtil.assignEther(ISP.address),
@@ -106,19 +141,15 @@ async function prepare() {
   console.log(chalk.yellow(assigned));
   console.log(chalk.yellow(registered));
 
-  insertMockUser();
-
   const contractAbi = contract.abi;
   CONTRACT_ADDRESS = contract.networks[NETWORK_ID].address;
   RC = EthereumUtil.constructSmartContract(contractAbi, CONTRACT_ADDRESS);
+
+  insertMockUser();
+  addStoredPayloadEventListener();
 }
 
 function insertMockUser() {
-  /**
-   * our mock of users data stored in the ISP
-   * in real life, this data is collected by ISP during users
-   * registration and then stored in database.
-   */
   const mockUser = {
     username: 'john',
     password: 'fish',

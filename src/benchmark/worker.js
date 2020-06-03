@@ -1,4 +1,4 @@
-const CryptoUtil = require('../../actors/utils/crypto-util');
+const CryptoUtil = require('../actors/utils/crypto-util');
 
 const signPayload = function (privateKey, payload, callback) {
   const signed = CryptoUtil.signPayload(privateKey, payload);
