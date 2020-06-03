@@ -66,6 +66,7 @@ function constructAutoCannonInstance(title, url, payload) {
     },
     body: JSON.stringify({
       privateKey: OWNER.privateKey,
+      address: OWNER.address,
       payload: payload
     }),
     connections: 10,

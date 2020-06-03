@@ -36,6 +36,7 @@
     "eth-crypto": "^1.4.0",
     "express": "^4.17.1",
     "fast-json-body": "^1.1.0",
+    "fastify": "^2.14.1",
     "node-cache": "^5.1.0",
     "truffle-assertions": "^0.9.1",
     "uuid": "^3.3.2",
