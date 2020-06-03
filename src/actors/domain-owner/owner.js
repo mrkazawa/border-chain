@@ -54,14 +54,12 @@ function addStoredPayloadEventListener(auth, isp) {
   }, function (error, event) {
     if (error) console.log(chalk.red(error));
 
-    console.log(`i got event: ${event}`);
-
     const sender = event.returnValues['sender'];
     const payloadHash = event.returnValues['payloadHash'];
     console.log(chalk.yellow(`Owner ${sender} has stored payload ${payloadHash}`));
 
     if (sender == OWNER.address) {
-      if (!payloadDB.isPayloadVerified(payloadHash)) {
+      if (payloadDB.isPayloadExist(payloadHash) && !payloadDB.isPayloadVerified(payloadHash)) {
         sendAuthPayloadToIsp(auth, isp);
       }
     }
@@ -119,21 +117,6 @@ async function sendAuthPayloadToBlockchain(authHash, gatewayAddress, ispAddress,
   TX_NONCE++;
 }
 
-async function main() {
-  const prepared = await prepare();
-  const isp = prepared[0];
-  const contractAddress = prepared[1];
-
-  const auth = createAuthenticationPayload();
-  const authHash = CryptoUtil.hashPayload(auth);
-
-  addStoredPayloadEventListener(auth, isp);
-  addGatewayVerifiedEventListener();
-
-  payloadDB.insertNewPayload(authHash, GATEWAY.address, isp.address);
-  await sendAuthPayloadToBlockchain(authHash, GATEWAY.address, isp.address, contractAddress);
-}
-
 function benchmark(payload) {
   const instance = constructAutoCannonInstance('Owner send many Auth Payload to ISP', ISP_AUTHN_URL, payload);
 
@@ -158,7 +141,7 @@ function benchmark(payload) {
   
   // this is used to kill the instance on CTRL-C
   process.on('SIGINT', function() {
-    console.log( "\nGracefully shutting down from SIGINT (Ctrl-C)" );
+    console.log(chalk.bgRed.white('\nGracefully shutting down from SIGINT (Ctrl-C)'));
     instance.stop();
   });
 }
@@ -177,9 +160,33 @@ function constructAutoCannonInstance(title, url, payload) {
     connections: 10,
     pipelining: 1,
     bailout: 1000,
-    //overallRate: 100, // rate of requests to make per second from all connections
-    duration: 20
+    //overallRate: 10, // rate of requests to make per second from all connections
+    amount: 100000,
+    duration: 1
   }, console.log);
+}
+
+async function main() {
+  const prepared = await prepare();
+
+  const isp = prepared[0];
+  if (isp == undefined || isp == '') {
+    throw new Error('Cannot get ISP info, possibly the ISP has not run yet!');
+  }
+
+  const contractAddress = prepared[1];
+  if (contractAddress == undefined || contractAddress == '') {
+    throw new Error('Cannot get contract address info, possibly the ETH network has not run yet!');
+  }
+
+  const auth = createAuthenticationPayload();
+  const authHash = CryptoUtil.hashPayload(auth);
+
+  addStoredPayloadEventListener(auth, isp);
+  addGatewayVerifiedEventListener();
+
+  payloadDB.insertNewPayload(authHash, GATEWAY.address, isp.address);
+  await sendAuthPayloadToBlockchain(authHash, GATEWAY.address, isp.address, contractAddress);
 }
 
 main();

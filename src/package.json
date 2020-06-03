@@ -9,7 +9,7 @@
     "owner": "BENCHMARKING=false node actors/domain-owner/owner",
     "owner-benchmark": "BENCHMARKING=true node actors/domain-owner/owner",
     "isp": "BENCHMARKING=false node --experimental-modules actors/isp/isp",
-    "isp-benchmark": "BENCHMARKING=true node --experimental-modules actors/isp/isp-cluster",
+    "isp-benchmark": "BENCHMARKING=true node --experimental-modules actors/isp/isp",
     "index": "node --experimental-modules actors/index",
     "test": "jest && truffle test"
   },

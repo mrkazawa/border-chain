@@ -9,9 +9,9 @@ if [[ ! -f .bash_profile ]]; then
     echo 'BGREEN="\[\033[01;32m\]"' >>.bash_profile
     echo 'BYELLOW="\[\033[01;33m\]"' >>.bash_profile
     echo 'BCYAN="\[\033[01;36m\]"' >>.bash_profile
-    echo 'IBLACK="\[\033[0;90m\]"' >>.bash_profile
+    echo 'IWHITE="\[\033[0;97m\]"' >>.bash_profile
     echo 'PS_CLEAR="\[\033[0m\]"' >>.bash_profile
-    echo 'export PS1="${BGREEN}\u ${BYELLOW}\h ${BCYAN}\w${PS_CLEAR}\n${IBLACK}\$ "' >>.bash_profile
+    echo 'export PS1="${BGREEN}\u ${BYELLOW}\h ${BCYAN}\w${PS_CLEAR}\n${IWHITE}\$ "' >>.bash_profile
     source .bash_profile
 else
     echo "Skipping, BASH PROFILE already configured"
