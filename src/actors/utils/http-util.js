@@ -5,7 +5,8 @@ const {
   ADMIN_ISP_LIST_URL,
   ADMIN_ABI_URL,
   ADMIN_SEED_ETHER_URL,
-  ISP_AUTHN_URL
+  ISP_AUTHN_URL,
+  GATEWAY_AUTHN_URL
 } = require('../config');
 
 class HttpUtil {
@@ -77,6 +78,19 @@ class HttpUtil {
     const options = {
       method: 'post',
       url: ISP_AUTHN_URL,
+      data: {
+        payload: payload
+      }
+    };
+
+    const response = await HttpUtil.sendRequest(options);
+    return response.data;
+  }
+
+  static async sendAuthPayloadToGateway(payload) {
+    const options = {
+      method: 'post',
+      url: GATEWAY_AUTHN_URL,
       data: {
         payload: payload
       }

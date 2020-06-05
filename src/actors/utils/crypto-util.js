@@ -54,7 +54,7 @@ class CryptoUtil {
 
   static encryptSymmetrically(key, data) {
     let cipher = crypto.createCipher(algorithm, key);
-    let ciphered = cipher.update(data, inputEncoding, outputEncoding);
+    let ciphered = cipher.update(JSON.stringify(data), inputEncoding, outputEncoding);
     ciphered += cipher.final(outputEncoding);
     return ciphered;
   }
@@ -63,7 +63,7 @@ class CryptoUtil {
     let decipher = crypto.createDecipher(algorithm, key);
     let deciphered = decipher.update(ciphered, outputEncoding, inputEncoding);
     deciphered += decipher.final(inputEncoding);
-    return deciphered;
+    return JSON.parse(deciphered);
   }
 }
 

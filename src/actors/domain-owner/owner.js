@@ -28,6 +28,7 @@ function createAuthenticationPayload() {
     username: 'john',
     password: 'fish',
     routerIP: '200.100.10.10',
+    timestamp: Date.now(),
     nonce: CryptoUtil.randomValueBase64(64)
   };
 }

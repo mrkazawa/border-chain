@@ -1,4 +1,5 @@
 const express = require('express');
+const bodyParser = require('body-parser');
 const chalk = require('chalk');
 const NodeCache = require("node-cache");
 const workerFarm = require('worker-farm');
@@ -9,7 +10,7 @@ const FARM_OPTIONS = {
   maxConcurrentCallsPerWorker: Infinity
 };
 
-const workers = workerFarm(FARM_OPTIONS, require.resolve('./worker'), [
+const workers = workerFarm(FARM_OPTIONS, require.resolve('../worker'), [
   'signPayload',
   'verifyPayload',
   'encryptPayload',
@@ -54,7 +55,7 @@ const ISP = CryptoUtil.createNewIdentity();
 let TX_NONCE = 0;
 
 const app = express();
-app.use(express.json());
+app.use(bodyParser.json());
 
 app.post('/authenticate', async (req, res) => {
   const offChainPayload = req.body.payload;
