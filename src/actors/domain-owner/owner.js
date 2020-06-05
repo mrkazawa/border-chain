@@ -96,7 +96,7 @@ async function sendAuthPayloadToIsp(auth, isp) {
     benchmark(offChainPayload);
 
   } else {
-    const result = await HttpUtil.sendAuthPayloadToIsp(offChainPayload);
+    const result = await HttpUtil.sendAuthenticationPayloadToIsp(offChainPayload);
     console.log(result);
   }
 }

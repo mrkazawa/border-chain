@@ -91,7 +91,7 @@ async function sendAuthPayloadToGateway(payload) {
     benchmark(payload);
 
   } else {
-    const result = await HttpUtil.sendAuthPayloadToGateway(payload);
+    const result = await HttpUtil.sendAuthenticationPayloadToGateway(payload);
     console.log(result);
   }
 }
@@ -152,8 +152,7 @@ async function main(option) {
     payloadHash: hash,
     authOption: option,
     vendorId: "samsung", // a mock vendor id
-    deviceId: DEVICE.address,
-    nonce: tools.randomValueBase64(64) // to protect replay at gateway
+    deviceId: DEVICE.address
   }
 
   await sendAuthPayloadToGateway(payloadForGateway);

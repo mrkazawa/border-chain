@@ -4,6 +4,7 @@ const ADMIN_PORT = 3000;
 const ADMIN_BASE_URL = 'http://' + ADMIN_HOSTNAME + ':' + ADMIN_PORT;
 const ADMIN_ISP_LIST_URL = ADMIN_BASE_URL + '/isp';
 const ADMIN_VENDOR_LIST_URL = ADMIN_BASE_URL + '/vendor';
+const ADMIN_GATEWAY_LIST_URL = ADMIN_BASE_URL + '/gateway';
 const ADMIN_ABI_URL = ADMIN_BASE_URL + '/contract-abi';
 const ADMIN_SEED_ETHER_URL = ADMIN_BASE_URL + '/ether';
 
@@ -44,6 +45,7 @@ const ETH_PROVIDER_URL = 'ws://' + ETH_HOSTNAME + ':' + ETH_PORT;
 module.exports = {
   ADMIN_ISP_LIST_URL,
   ADMIN_VENDOR_LIST_URL,
+  ADMIN_GATEWAY_LIST_URL,
   ADMIN_ABI_URL,
   ADMIN_SEED_ETHER_URL,
   ISP_AUTHN_URL,

@@ -22,6 +22,9 @@ const CryptoUtil = require('../utils/crypto-util');
 const EthereumUtil = require('../utils/ethereum-util');
 const HttpUtil = require('../utils/http-util');
 
+const PayloadDB = require('./db/auth-payload-db');
+const payloadDB = new PayloadDB();
+
 const nonces = new NodeCache({
   stdTTL: 1000,
   checkperiod: 120
@@ -42,98 +45,96 @@ const isBenchmarking = () => {
 // TODO: we should build a database to store
 // the list of vendor id and vendor address
 const VENDOR_ID = 'samsung';
-const VENDOR = CryptoUtil.createNewIdentity();
+let VENDOR;
 
-// global variable for deployed Registry Contract
+const GATEWAY = CryptoUtil.createNewIdentity();
 let RC;
 let CONTRACT_ADDRESS;
-const ISP = CryptoUtil.createNewIdentity();
 let TX_NONCE = 0;
-
-
-/**
- * our mock of vendor ID to eth address mapping.
- * the gateway maintains this mapping in production.
- */
-const vendorMapping = {
-  'samsung': {
-    'address': tools.getVendorAddress()
-  },
-  'lg': {
-    'address': '0x0000abc'
-  }
-};
-
-// setup parameters that are known by the gateway.
-const gatewayPrivateKey = tools.getGatewayPrivateKey();
-const gatewayAddress = tools.getGatewayAddress();
-// creating RegistryContract from deployed contract at the given address
-const RC = tools.constructSmartContract(tools.getContractABI(), tools.getContractAddress());
 
 const app = express();
 app.use(bodyParser.json());
 
 app.post('/authenticate', async (req, res) => {
+  if(req.body.constructor === Object && Object.keys(req.body).length === 0) return res.status(401).send('your request does not have body!');
+
   const offChainPayload = req.body.offChainPayload;
   const payloadHash = req.body.payloadHash;
   const authOption = req.body.authOption;
   const vendorId = req.body.vendorId;
   const deviceId = req.body.deviceId;
-  const nonce = req.body.nonce;
 
   const exist = nonces.get(payloadHash);
   if (!isBenchmarking() && exist && exist != undefined ) return res.status(401).send('we already process this nonce before!');
-  nonces.set(payloadHash);
-
   if (vendorId != VENDOR_ID) return res.status(401).send('invalid vendor id!');
 
+  nonces.set(payloadHash);
+  payloadDB.insertNewPayload(payloadHash, deviceId, VENDOR.address, authOption, offChainPayload);
 
-  // TODO: check the nonce
-  if (typeof vendorMapping[vendorID] !== 'undefined') {
-    let vendorAddress = vendorMapping[vendorID].address;
+  try {
+    await sendAuthPayloadToBlockchain(payloadHash, deviceId, VENDOR.address);
+    res.status(200).send('payload received, forwarding to vendor!');
 
-    // sending transaction to register payload to the smart contract
-    let tx = await RC.methods.storeAuthNPayload(authPayloadHash, deviceID, vendorAddress).send({
-      from: gatewayAddress,
-      gas: 1000000
-    });
-    if (typeof tx.events.NewPayloadAdded !== 'undefined') {
-      const event = tx.events.NewPayloadAdded;
-      console.log('Tx stored in the block!');
-      console.log('Storing Authn Tx from: ', event.returnValues['sender']);
-      console.log('Authn payload: ', event.returnValues['payloadHash']);
-
-      // sending authentication payload to the vendor
-      let options = {
-        method: 'POST',
-        uri: tools.getVendorAuthnEndpoint(),
-        body: {
-          offChainPayload
-        },
-        resolveWithFullResponse: true,
-        json: true // Automatically stringifies the body to JSON
-      };
-      rp(options).then(function (response) {
-        console.log('Response status code: ', response.statusCode)
-        console.log('Response body: ', response.body);
-        if (response.statusCode == '200') {
-          res.status(200).send('authentication attempt successful');
-        } else {
-          res.status(403).send(response.body);
-        }
-      }).catch(function (err) {
-        console.log(err);
-        res.status(500).send(err);
-      });
-    } else {
-      res.status(500).send('cannot store auth payload Tx to blockchain!');
-    }
-  } else {
-    res.status(404).send('vendor ID is not found!');
+  } catch (err) {
+    res.status(500).send(`internal error: ${err}`);
   }
 });
 
-// main
-app.listen(5000, () =>
-  console.log('Gateway Server is listening on port 5000!'),
-);
+app.listen(HTTP_PORT, () => {
+  console.log(`Hit me up on ${HOSTNAME}.local:${HTTP_PORT}`);
+});
+
+async function sendAuthPayloadToBlockchain(authHash, deviceAddress, vendorAddress) {
+  const storeAuth = RC.methods.storeAuthNPayload(authHash, deviceAddress, vendorAddress).encodeABI();
+
+  workers.signTransaction(GATEWAY.privateKey, GATEWAY.address, CONTRACT_ADDRESS, TX_NONCE, storeAuth, async function (err, signed) {
+    if (err || !signed) throw new Error('Something wrong during signing!');
+    if (!isBenchmarking()) await EthereumUtil.sendTransaction(signed);
+    TX_NONCE++;
+  });
+}
+
+function sendPayloadToVendor(payloadHash) {
+  // get payload option
+}
+
+function addStoredPayloadEventListener() {
+  RC.events.NewPayloadAdded({
+    fromBlock: 0
+  }, function (error, event) {
+    if (error) console.log(chalk.red(error));
+
+    const sender = event.returnValues['sender'];
+    const payloadHash = event.returnValues['payloadHash'];
+
+    if (sender == GATEWAY.address) {
+      console.log(chalk.yellow(`This gateway ${sender} has stored payload ${payloadHash} in the blockchain`));
+
+      if (payloadDB.isPayloadExist(payloadHash) && !payloadDB.isPayloadVerified(payloadHash)) {
+        sendPayloadToVendor(payloadHash);
+      }
+    }
+  });
+}
+
+async function prepare() {
+  const [assigned, registered, vendor, contract] = await Promise.all([
+    HttpUtil.assignEther(GATEWAY.address),
+    HttpUtil.registerGateway(GATEWAY.address, GATEWAY.publicKey),
+    HttpUtil.getVendorInfo(),
+    HttpUtil.getContractAbi()
+  ]);
+
+  console.log(chalk.yellow(assigned));
+  console.log(chalk.yellow(registered));
+
+  VENDOR = vendor;
+  
+  const contractAbi = contract.abi;
+  CONTRACT_ADDRESS = contract.networks[ETH_NETWORK_ID].address;
+  RC = EthereumUtil.constructSmartContract(contractAbi, CONTRACT_ADDRESS);
+
+  addStoredPayloadEventListener();
+}
+
+prepare();

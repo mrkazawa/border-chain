@@ -13,8 +13,9 @@ const HTTP_PORT = process.env.HTTP_PORT || 3000;
  */
 const REGISTRY_CONTRACT = require('../build/contracts/RegistryContract.json');
 
-let verifiedIsp;
-let verifiedVendor;
+let registeredIsp;
+let registeredVendor;
+let registeredGateway;
 
 const app = express();
 app.use(bodyParser.json());
@@ -22,11 +23,14 @@ app.use(bodyParser.json());
 // GET contract ABI
 app.get('/contract-abi', (req, res) => res.send(REGISTRY_CONTRACT));
 
-// GET list of verified ISPs
-app.get('/isp', (req, res) => res.send(verifiedIsp));
+// GET address and public key of registered ISP
+app.get('/isp', (req, res) => res.send(registeredIsp));
 
-// GET list of verified IoT vendors
-app.get('/vendor', (req, res) => res.send(verifiedVendor));
+// GET address and public key of registered IoT vendor
+app.get('/vendor', (req, res) => res.send(registeredVendor));
+
+// GET address and public key of registered IoT gateway
+app.get('/gateway', (req, res) => res.send(registeredGateway));
 
 // POST add new ISP
 app.post('/isp', (req, res) => {
@@ -36,7 +40,7 @@ app.post('/isp', (req, res) => {
     (typeof isp.address !== 'undefined' && isp.address) &&
     (typeof isp.publicKey !== 'undefined' && isp.publicKey)
   ) {
-    verifiedIsp = isp;
+    registeredIsp = isp;
     res.send(`New ISP ${isp.address} is registered`);
     
   } else {
@@ -52,8 +56,24 @@ app.post('/vendor', (req, res) => {
     (typeof vendor.address !== 'undefined' && vendor.address) &&
     (typeof vendor.publicKey !== 'undefined' && vendor.publicKey)
   ) {
-    verifiedVendor = vendor;
+    registeredVendor = vendor;
     res.send(`New IoT vendor ${vendor.address} is registered`);
+    
+  } else {
+    res.status(401).send('Your request must include address and public key');
+  }
+});
+
+// POST add new IoT gateway
+app.post('/gateway', (req, res) => {
+  const gateway = req.body;
+
+  if (
+    (typeof gateway.address !== 'undefined' && gateway.address) &&
+    (typeof gateway.publicKey !== 'undefined' && gateway.publicKey)
+  ) {
+    registeredGateway = gateway;
+    res.send(`New IoT gateway ${gateway.address} is registered`);
     
   } else {
     res.status(401).send('Your request must include address and public key');

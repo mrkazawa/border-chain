@@ -132,7 +132,7 @@ function addStoredPayloadEventListener() {
 async function prepare() {
   const [assigned, registered, contract] = await Promise.all([
     HttpUtil.assignEther(ISP.address),
-    HttpUtil.registerISP(ISP.address, ISP.publicKey),
+    HttpUtil.registerIsp(ISP.address, ISP.publicKey),
     HttpUtil.getContractAbi()
   ]);
 
