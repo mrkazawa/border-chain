@@ -26,7 +26,7 @@ class AuthPayloadDB extends DB {
         Verifier TEXT NOT NULL, \
         AuthOption INTEGER NOT NULL, \
         Payload TEXT NOT NULL, \
-        Status INTEGER NOT NULL, \
+        Status INTEGER NOT NULL \
       );';
 
     this.db.prepare(sql).run();

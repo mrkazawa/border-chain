@@ -28,7 +28,7 @@ Vagrant.configure("2") do |config|
         when 4 # for isp
           vb.cpus = 8
         when 5 # for gateway
-          vb.cpus = 8
+          vb.cpus = 4
         when 6 # for vendor
           vb.cpus = 8
         end
