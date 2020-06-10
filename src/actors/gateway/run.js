@@ -42,7 +42,8 @@ async function runMaster() {
       cluster.fork();
     });
 
-    await prepare();
+    const [RC, gateway] = await prepare();
+    addStoredPayloadEventListener(RC, gateway.address);
   }
 }
 
@@ -105,52 +106,7 @@ async function runWorkers() {
     app.listen(HTTP_PORT, () => {
       console.log(`Running ${process.pid}: hit me up on ${HOSTNAME}.local:${HTTP_PORT}`);
     });
-
-    addStoredPayloadEventListener(RC, gateway.address);
   }
-}
-
-function sendAuthPayloadToBlockchain(contract, srcAddress, dstAddress, txNonce, privateKey, authHash, deviceAddress, vendorAddress) {
-  const storeAuth = contract.methods.storeAuthNPayload(authHash, deviceAddress, vendorAddress).encodeABI();
-  const storeAuthTx = {
-    from: srcAddress,
-    to: dstAddress,
-    nonce: txNonce,
-    gasLimit: 5000000,
-    gasPrice: 5000000000,
-    data: storeAuth
-  };
-
-  const signedTx = CryptoUtil.signTransaction(privateKey, storeAuthTx);
-  if (!isBenchmarking()) EthereumUtil.sendTransaction(signedTx);
-}
-
-function sendPayloadToVendor(payloadHash) {
-  // get payload option
-  console.log('sending to vendor');
-}
-
-function addStoredPayloadEventListener(contract, gatewayAddress) {
-  contract.events.NewPayloadAdded({
-    fromBlock: 0
-  }, async function (error, event) {
-    if (error) console.log(chalk.red(error));
-
-    const sender = event.returnValues['sender'];
-    const payloadHash = event.returnValues['payloadHash'];
-
-    if (sender == gatewayAddress) {
-      console.log(chalk.yellow(`This gateway ${sender} has stored payload ${payloadHash} in the blockchain`));
-
-      // FIXME: it is still a race condition between clusters
-      // TODO: one solution is to let only the master to send,
-      // but it will create bottleneck and impact performance
-      const exist = await db.getAndDel(payloadHash);
-      if (exist && exist != undefined) {
-        sendPayloadToVendor(payloadHash);
-      }
-    }
-  });
 }
 
 async function prepare() {
@@ -177,10 +133,56 @@ async function prepare() {
       db.set('txNonce', 0, ttl) // start nonce from 0
     ]);
 
+    const contractAbi = contract.abi;
+    const contractAddress = contract.networks[ETH_NETWORK_ID].address;
+    const RC = EthereumUtil.constructSmartContract(contractAbi, contractAddress);
+
+    return [RC, gateway];
+
   } catch (err) {
     log(chalk.red(err));
     return new Error('Error when preparing');
   }
+}
+
+function sendAuthPayloadToBlockchain(contract, srcAddress, dstAddress, txNonce, privateKey, authHash, deviceAddress, vendorAddress) {
+  const storeAuth = contract.methods.storeAuthNPayload(authHash, deviceAddress, vendorAddress).encodeABI();
+  const storeAuthTx = {
+    from: srcAddress,
+    to: dstAddress,
+    nonce: txNonce,
+    gasLimit: 5000000,
+    gasPrice: 5000000000,
+    data: storeAuth
+  };
+
+  const signedTx = CryptoUtil.signTransaction(privateKey, storeAuthTx);
+  if (!isBenchmarking()) EthereumUtil.sendTransaction(signedTx);
+}
+
+function sendPayloadToVendor(payloadHash, storedPayload) {
+  // get payload option
+  console.log(`sending to vendor ${payloadHash} and ${storedPayload}`);
+}
+
+function addStoredPayloadEventListener(contract, gatewayAddress) {
+  contract.events.NewPayloadAdded({
+    fromBlock: 0
+  }, async function (error, event) {
+    if (error) console.log(chalk.red(error));
+
+    const sender = event.returnValues['sender'];
+    const payloadHash = event.returnValues['payloadHash'];
+
+    if (sender == gatewayAddress) {
+      console.log(chalk.yellow(`This gateway ${sender} has stored payload ${payloadHash} in the blockchain`));
+
+      const storedPayload = await db.getAndDel(payloadHash);
+      if (storedPayload && storedPayload != undefined) {
+        sendPayloadToVendor(payloadHash, storedPayload);
+      }
+    }
+  });
 }
 
 async function run() {
