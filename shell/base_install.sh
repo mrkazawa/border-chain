@@ -17,3 +17,7 @@ apt-get install -y sshpass
 # -------------------------------- For Crypto Stuff -------------------------------- #
 
 apt-get install -y build-essential g++
+
+# -------------------------------- For Database -------------------------------- #
+
+apt-get install memcached

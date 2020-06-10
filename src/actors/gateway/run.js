@@ -1,43 +1,10 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const chalk = require('chalk');
-const NodeCache = require("node-cache");
-const workerFarm = require('worker-farm');
+const log = console.log;
 
-const FARM_OPTIONS = {
-  maxConcurrentWorkers: require('os').cpus().length,
-  maxCallsPerWorker: Infinity,
-  maxConcurrentCallsPerWorker: Infinity
-};
-
-const workers = workerFarm(FARM_OPTIONS, require.resolve('../worker'), [
-  'signPayload',
-  'verifyPayload',
-  'encryptPayload',
-  'decryptPayload',
-  'signTransaction'
-]);
-
-const CryptoUtil = require('../utils/crypto-util');
-const EthereumUtil = require('../utils/ethereum-util');
-const HttpUtil = require('../utils/http-util');
-
-const PayloadDB = require('./db/auth-payload-db');
-const VendorDB = require('./db/vendor-db');
-
-const payloadDB = new PayloadDB();
-const vendorDB = new VendorDB();
-
-const nonces = new NodeCache({
-  stdTTL: 1000,
-  checkperiod: 120
-});
-
-const {
-  ETH_NETWORK_ID
-} = require('../config');
-
-const os = require("os");
+const cluster = require('cluster');
+const os = require('os');
 const HOSTNAME = os.hostname();
 const HTTP_PORT = process.env.HTTP_PORT || 3000;
 
@@ -45,57 +12,117 @@ const isBenchmarking = () => {
   return (process.env.BENCHMARKING == "true");
 };
 
-const GATEWAY = CryptoUtil.createNewIdentity();
-let RC;
-let CONTRACT_ADDRESS;
-let TX_NONCE = 0;
+const CryptoUtil = require('../utils/crypto-util');
+const EthereumUtil = require('../utils/ethereum-util');
+const HttpUtil = require('../utils/http-util');
 
-const app = express();
-app.use(bodyParser.json());
+const {
+  ETH_NETWORK_ID
+} = require('../config');
 
-app.post('/authenticate', (req, res) => {
-  if(req.body.constructor === Object && Object.keys(req.body).length === 0) return res.status(401).send('your request does not have body!');
-  const payload = req.body.payload;
+const DB = require('./db');
+const db = new DB();
 
-  let payloadHash;
-  if (!isBenchmarking()) payloadHash = payload.payloadHash;
-  else payloadHash = CryptoUtil.hashPayload(Date.now());
+async function runMaster() {
+  if (cluster.isMaster) {
+    const numWorkers = os.cpus().length;
+    log(`Setting up ${numWorkers} workers...`);
 
-  const offChainPayload = payload.offChainPayload;
-  const authOption = payload.authOption;
-  const vendorId = payload.vendorId;
-  const deviceId = payload.deviceId;
+    for (let i = 0; i < numWorkers; i += 1) {
+      cluster.fork();
+    }
 
-  const exist = nonces.get(payloadHash);
-  if (!isBenchmarking() && exist && exist != undefined ) return res.status(401).send('we already process this nonce before!');
-  if (!vendorDB.isVendorExist(vendorId)) return res.status(401).send('invalid vendor id!');
+    cluster.on('online', function (worker) {
+      log(chalk.green(`Worker ${worker.process.pid} is online`));
+    });
 
-  nonces.set(payloadHash);
-  const vendor = vendorDB.getVendorDetail(vendorId);
-  payloadDB.insertNewPayload(payloadHash, deviceId, vendor[0].Address, authOption, offChainPayload);
+    cluster.on('exit', function (worker, code, signal) {
+      log(chalk.red(`Worker ${worker.process.pid} died with code: ${code}, and signal: ${signal}`));
+      log(`Starting a new worker`);
+      cluster.fork();
+    });
 
-  try {
-    sendAuthPayloadToBlockchain(payloadHash, deviceId, vendor[0].Address);
-    res.status(200).send('payload received, forwarding to vendor!');
-
-  } catch (err) {
-    console.log(`internal error: ${err}`);
-    res.status(500).send(`internal error: ${err}`);
+    await prepare();
   }
-});
+}
 
-app.listen(HTTP_PORT, () => {
-  console.log(`Hit me up on ${HOSTNAME}.local:${HTTP_PORT}`);
-});
+async function runWorkers() {
+  if (cluster.isWorker) {
+    const [gateway, vendor, contract] = await Promise.all([
+      db.get('gateway'),
+      db.get('vendor'),
+      db.get('contract')
+    ]);
 
-function sendAuthPayloadToBlockchain(authHash, deviceAddress, vendorAddress) {
-  const storeAuth = RC.methods.storeAuthNPayload(authHash, deviceAddress, vendorAddress).encodeABI();
+    if (gateway == undefined || vendor == undefined || contract == undefined) throw new Error('Worker cannot get shared parameters');
 
-  workers.signTransaction(GATEWAY.privateKey, GATEWAY.address, CONTRACT_ADDRESS, TX_NONCE, storeAuth, async function (err, signed) {
-    if (err || !signed) throw new Error('Something wrong during signing!');
-    if (!isBenchmarking()) await EthereumUtil.sendTransaction(signed);
-    TX_NONCE++;
-  });
+    const contractAbi = contract.abi;
+    const contractAddress = contract.networks[ETH_NETWORK_ID].address;
+    const RC = EthereumUtil.constructSmartContract(contractAbi, contractAddress);
+
+    const app = express();
+    app.use(bodyParser.json());
+
+    app.post('/authenticate', async (req, res) => {
+      if (req.body.constructor === Object && Object.keys(req.body).length === 0) return res.status(401).send('your request does not have body!');
+      const payload = req.body.payload;
+
+      let payloadHash;
+      if (!isBenchmarking()) payloadHash = payload.payloadHash;
+      else payloadHash = CryptoUtil.hashPayload(Date.now());
+
+      const offChainPayload = payload.offChainPayload;
+      const authOption = payload.authOption;
+      const vendorId = payload.vendorId;
+      const deviceId = payload.deviceId;
+
+      const exist = await db.get(payloadHash);
+      if (!isBenchmarking() && exist && exist != undefined) return res.status(401).send('we already process this nonce before!');
+      if (vendorId != vendor.id) return res.status(401).send('invalid vendor id!');
+
+      const storedPayload = {
+        offChainPayload: offChainPayload,
+        authOption: authOption,
+        vendorId: vendorId,
+        deviceId: deviceId
+      }
+
+      db.set(payloadHash, storedPayload, 600);
+
+      try {
+        let txNonce = await db.get('txNonce');
+        sendAuthPayloadToBlockchain(RC, gateway.address, contractAddress, txNonce, gateway.privateKey, payloadHash, deviceId, vendor.address);
+        await db.incr('txNonce', 1, 2592000);
+
+        res.status(200).send('payload received, forwarding to vendor!');
+
+      } catch (err) {
+        console.log(`internal error: ${err}`);
+        res.status(500).send(`internal error: ${err}`);
+      }
+    });
+
+    app.listen(HTTP_PORT, () => {
+      console.log(`Running ${process.pid}: hit me up on ${HOSTNAME}.local:${HTTP_PORT}`);
+    });
+
+    addStoredPayloadEventListener(RC, gateway.address);
+  }
+}
+
+function sendAuthPayloadToBlockchain(contract, srcAddress, dstAddress, txNonce, privateKey, authHash, deviceAddress, vendorAddress) {
+  const storeAuth = contract.methods.storeAuthNPayload(authHash, deviceAddress, vendorAddress).encodeABI();
+  const storeAuthTx = {
+    from: srcAddress,
+    to: dstAddress,
+    nonce: txNonce,
+    gasLimit: 5000000,
+    gasPrice: 5000000000,
+    data: storeAuth
+  };
+
+  const signedTx = CryptoUtil.signTransaction(privateKey, storeAuthTx);
+  if (!isBenchmarking()) EthereumUtil.sendTransaction(signedTx);
 }
 
 function sendPayloadToVendor(payloadHash) {
@@ -103,19 +130,23 @@ function sendPayloadToVendor(payloadHash) {
   console.log('sending to vendor');
 }
 
-function addStoredPayloadEventListener() {
-  RC.events.NewPayloadAdded({
+function addStoredPayloadEventListener(contract, gatewayAddress) {
+  contract.events.NewPayloadAdded({
     fromBlock: 0
-  }, function (error, event) {
+  }, async function (error, event) {
     if (error) console.log(chalk.red(error));
 
     const sender = event.returnValues['sender'];
     const payloadHash = event.returnValues['payloadHash'];
 
-    if (sender == GATEWAY.address) {
-      if (!isBenchmarking()) console.log(chalk.yellow(`This gateway ${sender} has stored payload ${payloadHash} in the blockchain`));
+    if (sender == gatewayAddress) {
+      console.log(chalk.yellow(`This gateway ${sender} has stored payload ${payloadHash} in the blockchain`));
 
-      if (payloadDB.isPayloadExist(payloadHash) && !payloadDB.isPayloadVerified(payloadHash)) {
+      // FIXME: it is still a race condition between clusters
+      // TODO: one solution is to let only the master to send,
+      // but it will create bottleneck and impact performance
+      const exist = await db.getAndDel(payloadHash);
+      if (exist && exist != undefined) {
         sendPayloadToVendor(payloadHash);
       }
     }
@@ -123,23 +154,38 @@ function addStoredPayloadEventListener() {
 }
 
 async function prepare() {
-  const [assigned, registered, vendor, contract] = await Promise.all([
-    HttpUtil.assignEther(GATEWAY.address),
-    HttpUtil.registerGateway(GATEWAY.address, GATEWAY.publicKey),
-    HttpUtil.getVendorInfo(),
-    HttpUtil.getContractAbi()
-  ]);
+  try {
+    const gateway = CryptoUtil.createNewIdentity();
 
-  console.log(chalk.yellow(assigned));
-  console.log(chalk.yellow(registered));
+    const [assigned, registered, vendor, contract] = await Promise.all([
+      HttpUtil.assignEther(gateway.address),
+      HttpUtil.registerGateway(gateway.address, gateway.publicKey),
+      HttpUtil.getVendorInfo(),
+      HttpUtil.getContractAbi()
+    ]);
 
-  vendorDB.insertNewVendor('samsung', vendor.address, vendor.publicKey);
-  
-  const contractAbi = contract.abi;
-  CONTRACT_ADDRESS = contract.networks[ETH_NETWORK_ID].address;
-  RC = EthereumUtil.constructSmartContract(contractAbi, CONTRACT_ADDRESS);
+    log(chalk.yellow(assigned));
+    log(chalk.yellow(registered));
 
-  addStoredPayloadEventListener();
+    vendor.id = 'samsung';
+    const ttl = 2592000; // time-to-live
+
+    await Promise.all([
+      db.set('gateway', gateway, ttl),
+      db.set('vendor', vendor, ttl),
+      db.set('contract', contract, ttl),
+      db.set('txNonce', 0, ttl) // start nonce from 0
+    ]);
+
+  } catch (err) {
+    log(chalk.red(err));
+    return new Error('Error when preparing');
+  }
 }
 
-prepare();
+async function run() {
+  await runMaster();
+  await runWorkers();
+}
+
+run();
