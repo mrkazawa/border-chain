@@ -18,8 +18,9 @@
     "device-fingerprint-benchmark": "BENCHMARKING=true node actors/device/run 3",
     "device-mac": "BENCHMARKING=false node actors/device/run 4",
     "device-mac-benchmark": "BENCHMARKING=true node actors/device/run 4",
-    "gateway": "BENCHMARKING=false node actors/gateway/run",
-    "gateway-benchmark": "BENCHMARKING=true node actors/gateway/run",
+    "gateway": "node actors/gateway/run",
+    "gateway-benchmark-self": "STRESS_GATEWAY=true node actors/gateway/run",
+    "gateway-benchmark-vendor": "STRESS_VENDOR=true node actors/gateway/run",
     "vendor": "BENCHMARKING=false node actors/vendor/run",
     "vendor-benchmark": "BENCHMARKING=true node actors/vendor/run",
     "test": "jest && truffle test"

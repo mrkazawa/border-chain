@@ -1,5 +1,10 @@
 const autocannon = require('autocannon');
 const chalk = require('chalk');
+const log = console.log;
+
+const isBenchmarking = () => {
+  return (process.env.BENCHMARKING == "true");
+};
 
 const CryptoUtil = require('../utils/crypto-util');
 const HttpUtil = require('../utils/http-util');
@@ -9,87 +14,77 @@ const {
   DEVICE_AUTHN_OPTION
 } = require('../config');
 
-const isBenchmarking = () => {
-  return (process.env.BENCHMARKING == "true");
-};
-
 const DEVICE = CryptoUtil.createNewIdentity();
-const DEVICE_SN = '1234-5678-1234-5678'; // device serial number
 
-const VENDOR_ID = 'samsung'; // a mock vendor id
-let VENDOR; // vendor public key will be put here
-const SECRET_KEY = 'secret'; // secret key between vendor and device
-const FINGERPRINT = 'cf23df2207d99a74fbe169e3eba035e633b65d94'; // example of hash of the secret file
-const MAC = '00-14-22-01-23-45'; // example of mac address of device
-
-async function assignPayload(option) {
+async function assignPayload(option, deviceProperties, vendor) {
   switch (option) {
     case DEVICE_AUTHN_OPTION.PKE:
-      return await constructPublicKeyPayload();
+      return await constructPublicKeyPayload(deviceProperties, vendor);
 
     case DEVICE_AUTHN_OPTION.SKE:
-      return constructSecretKeyPayload();
+      return constructSecretKeyPayload(deviceProperties);
 
     case DEVICE_AUTHN_OPTION.FINGERPRINT:
-      return constructFingerprintPayload();
+      return constructFingerprintPayload(deviceProperties);
 
     case DEVICE_AUTHN_OPTION.MAC:
-      return constructMacAddressPayload();
+      return constructMacAddressPayload(deviceProperties);
   }
 }
 
-async function constructPublicKeyPayload() {
+async function constructPublicKeyPayload(deviceProperties, vendor) {
   const auth = {
-    deviceSN: DEVICE_SN,
+    serialNumber: deviceProperties.serialNumber,
     timestamp: Date.now(),
     nonce: CryptoUtil.randomValueBase64(64)
   };
 
-  const authHash = CryptoUtil.hashPayload(auth);
-  const encrypted = await CryptoUtil.encryptPayload(VENDOR.publicKey, auth);
-  const authSignature = CryptoUtil.signPayload(DEVICE.privateKey, encrypted);
-  const payloadForVendor = {
-    authPayload: encrypted,
+  const authSignature = CryptoUtil.signPayload(DEVICE.privateKey, auth);
+  const authPayload = {
+    auth: auth,
     authSignature: authSignature
-  };
+  }
 
-  return [authHash, payloadForVendor];
+  const authHash = CryptoUtil.hashPayload(auth);
+  const encrypted = await CryptoUtil.encryptPayload(vendor.publicKey, authPayload);
+  
+  return [authHash, encrypted];
 }
 
-function constructSecretKeyPayload() {
+function constructSecretKeyPayload(deviceProperties) {
   const auth = {
-    deviceSN: DEVICE_SN,
+    serialNumber: deviceProperties.serialNumber,
     timestamp: Date.now(),
     nonce: CryptoUtil.randomValueBase64(64)
   }
 
   const authHash = CryptoUtil.hashPayload(auth);
-  const encrypted = CryptoUtil.encryptSymmetrically(SECRET_KEY, auth);
+  const encrypted = CryptoUtil.encryptSymmetrically(deviceProperties.secretKey, auth);
 
   return [authHash, encrypted];
 }
 
-function constructFingerprintPayload() {
+function constructFingerprintPayload(deviceProperties) {
   const auth = {
-    deviceSN: DEVICE_SN,
-    fingerprint: FINGERPRINT,
+    serialNumber: deviceProperties.serialNumber,
+    fingerprint: deviceProperties.fingerprint,
     timestamp: Date.now(),
     nonce: CryptoUtil.randomValueBase64(64)
   }
-
   const authHash = CryptoUtil.hashPayload(auth);
+
   return [authHash, auth];
 }
 
-function constructMacAddressPayload() {
+function constructMacAddressPayload(deviceProperties) {
   const auth = {
-    deviceSN: DEVICE_SN,
-    mac: MAC,
+    serialNumber: deviceProperties.serialNumber,
+    mac: deviceProperties.mac,
     timestamp: Date.now(),
     nonce: CryptoUtil.randomValueBase64(64)
   }
-
   const authHash = CryptoUtil.hashPayload(auth);
+
   return [authHash, auth];
 }
 
@@ -99,12 +94,12 @@ async function sendAuthPayloadToGateway(payload) {
 
   } else {
     const result = await HttpUtil.sendAuthenticationPayloadToGateway(payload);
-    console.log(result);
+    log(result);
   }
 }
 
 function benchmark(payload) {
-  const instance = constructAutoCannonInstance('Bench the Gateway Authentication', GATEWAY_AUTHN_URL, payload);
+  const instance = constructAutoCannonInstance('Stress the Gateway Auth Server', GATEWAY_AUTHN_URL, payload);
 
   autocannon.track(instance, {
     renderProgressBar: true,
@@ -115,19 +110,19 @@ function benchmark(payload) {
 
   instance.on('tick', (counter) => {
     if (counter.counter == 0) {
-      console.log(chalk.redBright(`${instance.opts.title} WARN! requests possibly is not being processed`));
+      log(chalk.redBright(`${instance.opts.title} WARN! requests possibly is not being processed`));
     }
   });
 
   instance.on('done', (results) => {
-    console.log(chalk.cyan(`${instance.opts.title} Results:`));
-    console.log(chalk.cyan(`Avg Tput (Req/sec): ${results.requests.average}`));
-    console.log(chalk.cyan(`Avg Lat (ms): ${results.latency.average}`));
+    log(chalk.cyan(`${instance.opts.title} Results:`));
+    log(chalk.cyan(`Avg Tput (Req/sec): ${results.requests.average}`));
+    log(chalk.cyan(`Avg Lat (ms): ${results.latency.average}`));
   });
 
   // this is used to kill the instance on CTRL-C
   process.on('SIGINT', function () {
-    console.log(chalk.bgRed.white('\nGracefully shutting down from SIGINT (Ctrl-C)'));
+    log(chalk.bgRed.white('\nGracefully shutting down from SIGINT (Ctrl-C)'));
     instance.stop();
   });
 }
@@ -149,25 +144,38 @@ function constructAutoCannonInstance(title, url, payload) {
     //overallRate: 10, // rate of requests to make per second from all connections
     amount: 100000,
     duration: 1
-  }, console.log);
+  }, log);
+}
+
+async function prepare() {
+  const [registered, deviceProperties, vendor] = await Promise.all([
+    HttpUtil.registerDevice(DEVICE.address, DEVICE.publicKey),
+    HttpUtil.getDeviceProperties(),
+    HttpUtil.getVendorInfo()
+  ]);
+
+  log(chalk.yellow(registered));
+
+  return [deviceProperties, vendor];
 }
 
 async function main(option) {
-  VENDOR = await HttpUtil.getVendorInfo();
-  const [hash, payload] = await assignPayload(option);
-  const payloadForGateway = {
-    offChainPayload: payload,
-    payloadHash: hash,
+  const [deviceProperties, vendor] = await prepare();
+  const [authHash, auth] = await assignPayload(option, deviceProperties, vendor);
+
+  const authForGateway = {
+    auth: auth,
+    authHash: authHash,
     authOption: option,
-    vendorId: VENDOR_ID,
+    vendorId: deviceProperties.vendorId,
     deviceId: DEVICE.address
   }
 
-  await sendAuthPayloadToGateway(payloadForGateway);
+  await sendAuthPayloadToGateway(authForGateway);
 }
 
 if (process.argv.length !== 3) {
-  console.error('You have to put only one argument in integer: the DEVICE_AUTHN_OPTION!');
+  log(chalk.red('You have to put only one argument in integer: the DEVICE_AUTHN_OPTION!'));
   process.exit(1);
 
 } else {
@@ -175,7 +183,7 @@ if (process.argv.length !== 3) {
     main(parseInt(process.argv[2]));
 
   } else {
-    console.error('Your argument is invalid');
+    log(chalk.red('Your argument is invalid'));
     process.exit(1);
   }
 }

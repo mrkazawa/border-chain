@@ -1,11 +1,20 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const chalk = require('chalk');
-const NodeCache = require("node-cache");
+const log = console.log;
 const workerFarm = require('worker-farm');
 
+const cluster = require('cluster');
+const os = require('os');
+const HOSTNAME = os.hostname();
+const HTTP_PORT = process.env.HTTP_PORT || 3000;
+
+const isBenchmarking = () => {
+  return (process.env.BENCHMARKING == "true");
+};
+
 const FARM_OPTIONS = {
-  maxConcurrentWorkers: require('os').cpus().length,
+  maxConcurrentWorkers: os.cpus().length,
   maxCallsPerWorker: Infinity,
   maxConcurrentCallsPerWorker: Infinity
 };
@@ -23,56 +32,209 @@ const EthereumUtil = require('../utils/ethereum-util');
 const HttpUtil = require('../utils/http-util');
 
 const {
-  ETH_NETWORK_ID
+  ETH_NETWORK_ID,
+  DEVICE_AUTHN_OPTION
 } = require('../config');
 
-const os = require("os");
-const HOSTNAME = os.hostname();
-const HTTP_PORT = process.env.HTTP_PORT || 3000;
+const DB = require('./db');
+const db = new DB();
 
-/**
- * This cache is to store pending authentication payload from IoT gateways
- * that has not been process by this vendor.
- * 
- * This cache will be updated when the vendor receives the 'NewPayloadAdded'
- * events from the smart contract.
- * And this cache will be deleted when the vendor receives the '
- * 
- * This cache is key and value store.
- * The key is (string) payloadHash
- * The value is (string) senderAddress
- * 
- * There is a Time To Live parameter stdTTL in seconds,
- * Therefore the IoT gateways have to sends the off-chain payload to this vendor,quickly after
- * receiving the 'NewPayloadAdded' event
- */
-const pendingAuths = new NodeCache({
-  stdTTL: 6000,
-  checkperiod: 120
-});
+const MAX_TTL = 2592000; // maximum time-to-live
 
-const isBenchmarking = () => {
-  return (process.env.BENCHMARKING == "true");
-};
+// mock device properties
+const VENDOR_ID = 'samsung'; // vendor for device
+const DEVICE_SN = '1234-5678-1234-5678'; // device serial number
+const SECRET_KEY = 'secret'; // secret key between vendor and device
+const FINGERPRINT = 'cf23df2207d99a74fbe169e3eba035e633b65d94'; // example of hash of the secret file
+const MAC = '00-14-22-01-23-45'; // example of mac address of device
 
-let RC;
-let CONTRACT_ADDRESS;
-const VENDOR = CryptoUtil.createNewIdentity();
-let TX_NONCE = 0;
+async function runMaster() {
+  if (cluster.isMaster) {
+    const numWorkers = os.cpus().length;
+    log(`Setting up ${numWorkers} workers...`);
 
-const app = express();
-app.use(bodyParser.json());
+    for (let i = 0; i < numWorkers; i += 1) {
+      cluster.fork();
+    }
 
-app.post('/authenticate', async (req, res) => {
-  if(req.body.constructor === Object && Object.keys(req.body).length === 0) return res.status(401).send('your request does not have a body!');
-  const offChainPayload = req.body.payload;
+    cluster.on('online', function (worker) {
+      log(chalk.green(`Worker ${worker.process.pid} is online`));
+    });
 
-  res.status(200).send('authentication attempt successful!');
-});
+    cluster.on('exit', function (worker, code, signal) {
+      log(chalk.red(`Worker ${worker.process.pid} died with code: ${code}, and signal: ${signal}`));
+      log(`Starting a new worker`);
+      cluster.fork();
+    });
 
-app.listen(HTTP_PORT, () => {
-  console.log(`Hit me up on ${HOSTNAME}.local:${HTTP_PORT}`);
-});
+    const [RC, vendor] = await prepare();
+    addStoredPayloadEventListener(RC, vendor.address);
+  }
+}
+
+async function prepare() {
+  try {
+    const vendor = CryptoUtil.createNewIdentity();
+
+    const [assigned, registered, device, deviceProperties, contract] = await Promise.all([
+      HttpUtil.assignEther(vendor.address),
+      HttpUtil.registerVendor(vendor.address, vendor.publicKey),
+      HttpUtil.getDeviceInfo(),
+      HttpUtil.getDeviceProperties(),
+      HttpUtil.getContractAbi()
+    ]);
+
+    log(chalk.yellow(assigned));
+    log(chalk.yellow(registered));
+
+    await Promise.all([
+      db.set('vendor', vendor, MAX_TTL),
+      db.set('device', device, MAX_TTL),
+      db.set('contract', contract, MAX_TTL),
+      db.set('deviceProperties', deviceProperties, MAX_TTL),
+      db.set('txNonce', 0, MAX_TTL) // start nonce from 0
+    ]);
+
+    const contractAbi = contract.abi;
+    const contractAddress = contract.networks[ETH_NETWORK_ID].address;
+    const RC = EthereumUtil.constructSmartContract(contractAbi, contractAddress);
+
+    return [RC, vendor];
+
+  } catch (err) {
+    log(chalk.red(err));
+    return new Error('Error when preparing');
+  }
+}
+
+function addStoredPayloadEventListener(contract, vendorAddress) {
+  contract.events.NewPayloadAdded({
+    fromBlock: 0
+  }, async function (error, event) {
+    if (error) log(chalk.red(error));
+
+    const sender = event.returnValues['sender'];
+    const payloadHash = event.returnValues['payloadHash'];
+    const verifier = event.returnValues['verifier'];
+
+    if (verifier == vendorAddress) {
+      log(`Adding ${payloadHash} to pending cache`);
+
+      try {
+        await db.set(payloadHash, sender, 600);
+      } catch (err) {
+        log(chalk.red(err));
+        throw new Error('Error inserting payloadHash to database');
+      }
+    }
+  });
+}
+
+async function runWorkers() {
+  if (cluster.isWorker) {
+    const [vendor, device, contract, deviceProperties] = await Promise.all([
+      db.get('vendor'),
+      db.get('device'),
+      db.get('contract'),
+      db.get('deviceProperties')
+    ]);
+
+    if (vendor == undefined || contract == undefined || deviceProperties == undefined) throw new Error('Worker cannot get shared parameters');
+
+    const contractAbi = contract.abi;
+    const contractAddress = contract.networks[ETH_NETWORK_ID].address;
+    const RC = EthereumUtil.constructSmartContract(contractAbi, contractAddress);
+
+    const app = express();
+    app.use(bodyParser.json());
+
+    app.post('/authenticate', async (req, res) => {
+      if (req.body.constructor === Object && Object.keys(req.body).length === 0) return res.status(401).send('your request does not have a body!');
+      const offChainPayload = req.body.payload;
+
+      const payloadForVendor = await CryptoUtil.decryptPayload(vendor.privateKey, offChainPayload);
+      console.log(payloadForVendor);
+      const payload = payloadForVendor.payload;
+      const payloadSignature = payloadForVendor.payloadSignature;
+
+      const payloadHash = payload.payloadHash;
+      const auth = payload.auth;
+      const authOption = payload.authOption;
+      const vendorId = payload.vendorId;
+      const deviceId = payload.deviceId;
+
+      const sender = await db.get(payloadHash);
+      if (sender == undefined) return res.status(404).send('payload not found!');
+
+      const isValid = CryptoUtil.verifyPayload(payloadSignature, payload, sender);
+      if (!isValid) return res.status(401).send('invalid signature!');
+
+      if (vendorId != deviceProperties.vendorId) return res.status(401).send('invalid vendor id!');
+      console.log(deviceId);
+      console.log(device.address);
+      
+      if (deviceId != device.address) return res.status(401).send('invalid device id!');
+
+      const isPayloadValid = await verifyAuthPayload(authOption, auth, deviceProperties, vendor);
+      if (!isPayloadValid) return res.status(401).send('invalid device authentication payload!');
+
+      // verify to blockchain
+
+
+      res.status(200).send('authentication attempt successful!');
+    });
+
+    app.listen(HTTP_PORT, () => {
+      log(`Running ${process.pid}: hit me up on ${HOSTNAME}.local:${HTTP_PORT}`);
+    });
+  }
+}
+
+async function verifyAuthPayload(authOption, auth, deviceProperties, vendor) {
+  switch (authOption) {
+    case DEVICE_AUTHN_OPTION.PKE:
+      return await verifyPublicKeyPayload(auth, deviceProperties, vendor);
+
+    case DEVICE_AUTHN_OPTION.SKE:
+      return verifySecretKeyPayload(auth, deviceProperties);
+
+    case DEVICE_AUTHN_OPTION.FINGERPRINT:
+      return verifyFingerprintPayload(auth, deviceProperties);
+
+    case DEVICE_AUTHN_OPTION.MAC:
+      return verifyMacAddressPayload(auth, deviceProperties);
+  }
+}
+
+async function verifyPublicKeyPayload(auth, deviceProperties, vendor) {
+  const decrypted = await CryptoUtil.decryptPayload(vendor.privateKey, auth);
+  const isValid = CryptoUtil.verifyPayload(decrypted.authSignature, decrypted.auth);
+
+  //const isValid = CryptoUtil.verifyPayload(auth);
+  return (payload.deviceSN == DEVICE_SN);
+}
+
+function verifySecretKeyPayload(auth, deviceProperties) {
+  const decrypted = CryptoUtil.decryptSymmetrically(deviceProperties.secretKey, auth);
+  return (decrypted.serialNumber == deviceProperties.serialNumber);
+}
+
+function verifyFingerprintPayload(auth, deviceProperties) {
+  return (
+    auth.fingerprint == deviceProperties.fingerprint &&
+    auth.serialNumber == deviceProperties.serialNumber
+  );
+}
+
+function verifyMacAddressPayload(auth, deviceProperties) {
+  return (
+    auth.mac == deviceProperties.mac &&
+    auth.serialNumber == deviceProperties.serialNumber
+  );
+}
+
+
+
 
 async function sendVerificationToBlockchain(authHash, routerIP) {
   const routerIPInBytes = EthereumUtil.convertStringToByte(routerIP);
@@ -85,43 +247,9 @@ async function sendVerificationToBlockchain(authHash, routerIP) {
   });
 }
 
-function addStoredPayloadEventListener() {
-  RC.events.NewPayloadAdded({
-    fromBlock: 0
-  }, function (error, event) {
-    if (error) console.log(chalk.red(error));
-
-    const sender = event.returnValues['sender'];
-    const payloadHash = event.returnValues['payloadHash'];
-    const verifier = event.returnValues['verifier'];
-
-    if (verifier == VENDOR.address) {
-      pendingAuths.set(payloadHash, sender);
-      console.log(`adding ${payloadHash} to cache`);
-    }
-  });
+async function run() {
+  await runMaster();
+  await runWorkers();
 }
 
-async function prepare() {
-  const [assigned, registered, contract] = await Promise.all([
-    HttpUtil.assignEther(VENDOR.address),
-    HttpUtil.registerVendor(VENDOR.address, VENDOR.publicKey),
-    HttpUtil.getContractAbi()
-  ]);
-
-  console.log(chalk.yellow(assigned));
-  console.log(chalk.yellow(registered));
-
-  const contractAbi = contract.abi;
-  CONTRACT_ADDRESS = contract.networks[ETH_NETWORK_ID].address;
-  RC = EthereumUtil.constructSmartContract(contractAbi, CONTRACT_ADDRESS);
-
-  insertMockDevice();
-  addStoredPayloadEventListener();
-}
-
-function insertMockDevice() {
-
-}
-
-prepare();
+run();

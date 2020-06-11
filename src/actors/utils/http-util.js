@@ -5,7 +5,9 @@ const {
   ADMIN_ISP_LIST_URL,
   ADMIN_VENDOR_LIST_URL,
   ADMIN_GATEWAY_LIST_URL,
+  ADMIN_DEVICE_LIST_URL,
   ADMIN_ABI_URL,
+  ADMIN_DEVICE_PROPERTIES_URL,
   ADMIN_SEED_ETHER_URL,
   ISP_AUTHN_URL,
   VENDOR_AUTHN_URL,
@@ -63,6 +65,10 @@ class HttpUtil {
     return await HttpUtil.get(ADMIN_ABI_URL);
   }
 
+  static async getDeviceProperties() {
+    return await HttpUtil.get(ADMIN_DEVICE_PROPERTIES_URL);
+  }
+
   static async getIspInfo() {
     return await HttpUtil.get(ADMIN_ISP_LIST_URL);
   }
@@ -73,6 +79,10 @@ class HttpUtil {
 
   static async getGatewayInfo() {
     return await HttpUtil.get(ADMIN_GATEWAY_LIST_URL);
+  }
+
+  static async getDeviceInfo() {
+    return await HttpUtil.get(ADMIN_DEVICE_LIST_URL);
   }
 
   static async registerIsp(address, publicKey) {
@@ -100,6 +110,15 @@ class HttpUtil {
     };
 
     return await HttpUtil.post(ADMIN_GATEWAY_LIST_URL, data);
+  }
+
+  static async registerDevice(address, publicKey) {
+    const data = {
+      address: address,
+      publicKey: publicKey
+    };
+
+    return await HttpUtil.post(ADMIN_DEVICE_LIST_URL, data);
   }
 
   static async sendAuthenticationPayloadToIsp(payload) {
