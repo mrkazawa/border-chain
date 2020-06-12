@@ -14,6 +14,7 @@ const ADMIN_SEED_ETHER_URL = ADMIN_BASE_URL + '/ether';
 const ISP_HOSTNAME = 'actor4.local';
 const ISP_PORT = 3000;
 const ISP_BASE_URL = 'http://' + ISP_HOSTNAME + ':' + ISP_PORT;
+const ISP_USER_REGISTRATION_URL = ISP_BASE_URL + '/register';
 const ISP_AUTHN_URL = ISP_BASE_URL + '/authenticate';
 
 // for gateway
@@ -52,6 +53,7 @@ module.exports = {
   ADMIN_ABI_URL,
   ADMIN_DEVICE_PROPERTIES_URL,
   ADMIN_SEED_ETHER_URL,
+  ISP_USER_REGISTRATION_URL,
   ISP_AUTHN_URL,
   GATEWAY_AUTHN_URL,
   GATEWAY_AUTHZ_URL,

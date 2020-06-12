@@ -9,6 +9,7 @@ const {
   ADMIN_ABI_URL,
   ADMIN_DEVICE_PROPERTIES_URL,
   ADMIN_SEED_ETHER_URL,
+  ISP_USER_REGISTRATION_URL,
   ISP_AUTHN_URL,
   VENDOR_AUTHN_URL,
   GATEWAY_AUTHN_URL
@@ -83,6 +84,16 @@ class HttpUtil {
 
   static async getDeviceInfo() {
     return await HttpUtil.get(ADMIN_DEVICE_LIST_URL);
+  }
+
+  static async registerUser(username, password, routerIP) {
+    const data = {
+      username: username,
+      password: password,
+      routerIP: routerIP
+    }
+
+    return await HttpUtil.post(ISP_USER_REGISTRATION_URL, data);
   }
 
   static async registerIsp(address, publicKey) {

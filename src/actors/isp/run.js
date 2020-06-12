@@ -62,16 +62,9 @@ async function prepare() {
     log(chalk.yellow(assigned));
     log(chalk.yellow(registered));
 
-    const user =  {
-      username: 'john',
-      password: 'fish',
-      routerIP: '200.100.10.10'
-    };
-
     await Promise.all([
       db.set('isp', isp, MAX_TTL),
       db.set('contract', contract, MAX_TTL),
-      db.set(user.username, user, MAX_TTL),
       db.set('txNonce', 0, MAX_TTL) // start nonce from 0
     ]);
 
@@ -126,13 +119,31 @@ async function runWorkers() {
     const app = express();
     app.use(bodyParser.json());
 
+    app.post('/register', async (req, res) => {
+      if (req.body.constructor === Object && Object.keys(req.body).length === 0) return res.status(401).send('your request does not have body!');
+      const username = req.body.username;
+      const content = {
+        password: req.body.password,
+        routerIP: req.body.routerIP
+      };
+
+      try {
+        await db.set(username, content, MAX_TTL);
+
+        res.status(200).send('user successfully registered!');
+      } catch (err) {
+        log(`internal error: ${err}`);
+        res.status(500).send(`internal error: ${err}`);
+      }
+    });
+
     app.post('/authenticate', async (req, res) => {
       if (req.body.constructor === Object && Object.keys(req.body).length === 0) return res.status(401).send('your request does not have body!');
       const payload = req.body.payload;
 
       const payloadForISP = await CryptoUtil.decryptPayload(isp.privateKey, payload);
-      const auth = payloadForISP.authPayload;
-      const authSignature = payloadForISP.authSignature;
+      const auth = payloadForISP.payload;
+      const authSignature = payloadForISP.payloadSignature;
       const payloadHash = CryptoUtil.hashPayload(auth);
 
       const sender = await db.get(payloadHash);
