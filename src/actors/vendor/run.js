@@ -148,6 +148,29 @@ async function runWorkers() {
     const app = express();
     app.use(bodyParser.json());
 
+    app.post('/register', async (req, res) => {
+      if (req.body.constructor === Object && Object.keys(req.body).length === 0) return res.status(401).send('your request does not have body!');
+
+      const serialNumber = req.body.serialNumber;
+      const content = {
+        address: req.body.address,
+        publicKey: req.body.publicKey,
+        vendorId: req.body.vendorId,
+        secretKey: req.body.secretKey,
+        fingerprint: req.body.fingerprint,
+        mac: req.body.mac
+      };
+
+      try {
+        await db.set(serialNumber, content, MAX_TTL);
+
+        return res.status(200).send('device successfully registered!');
+      } catch (err) {
+        log(`internal error: ${err}`);
+        return res.status(500).send(`internal error: ${err}`);
+      }
+    });
+
     app.post('/authenticate', async (req, res) => {
       if (req.body.constructor === Object && Object.keys(req.body).length === 0) return res.status(401).send('your request does not have a body!');
       const offChainPayload = req.body.payload;
@@ -172,7 +195,7 @@ async function runWorkers() {
       if (vendorId != deviceProperties.vendorId) return res.status(401).send('invalid vendor id!');
       console.log(deviceId);
       console.log(device.address);
-      
+
       if (deviceId != device.address) return res.status(401).send('invalid device id!');
 
       const isPayloadValid = await verifyAuthPayload(authOption, auth, deviceProperties, vendor);
