@@ -1,6 +1,10 @@
 const chalk = require('chalk');
 const log = console.log;
 
+const isBenchmarking = () => {
+  return (process.env.BENCHMARKING == "true");
+};
+
 const EthereumUtil = require('../utils/ethereum-util');
 const CryptoUtil = require('../utils/crypto-util');
 const Processor = require('./processor');
@@ -19,28 +23,28 @@ class Contract {
 
     this.contractAddress = abi.networks[ETH_NETWORK_ID].address;
     this.contract = EthereumUtil.constructSmartContract(abi.abi, this.contractAddress);
-    this.nonce = 0;
+    //this.nonce = 0;
   }
 
-  addStoredPayloadEventListener(owner, auth, isp) {
+  addStoredPayloadEventListener(isp) {
     this.contract.events.NewPayloadAdded({
       fromBlock: 0
-    }, function (error, event) {
+    }, async function (error, event) {
       if (error) log(chalk.red(error));
-
+  
       const sender = event.returnValues['sender'];
       const payloadHash = event.returnValues['payloadHash'];
-      const target = event.returnValues['target'];
-
-      if (sender == owner.address) {
-        log(chalk.yellow(`Owner ${sender} has stored payload ${payloadHash}`));
-
-        Processor.processStoredPayload(owner, auth, isp, target);
+      const verifier = event.returnValues['verifier'];
+  
+      if (verifier == isp.address) {
+        log(chalk.yellow(`Receiving ${payloadHash} payload`));
+        
+        Processor.processStoredPayload(payloadHash, sender);
       }
     });
   }
 
-  addGatewayVerifiedEventListener(ourGateway) {
+  addGatewayVerifiedEventListener(isp) {
     this.contract.events.GatewayVerified({
       fromBlock: 0
     }, function (error, event) {
@@ -50,29 +54,28 @@ class Contract {
       const payloadHash = event.returnValues['payloadHash'];
       const gateway = event.returnValues['gateway'];
 
-      if (gateway == ourGateway.address) {
-        log(chalk.yellow(`ISP ${sender} has verified payload ${payloadHash} for our gateway ${gateway}`));
+      if (sender == isp.address) {
+        log(chalk.yellow(`Verified payload ${payloadHash}`));
 
-        Processor.processVerifiedPayload(ourGateway);
+        Processor.processVerifiedPayload(payloadHash, gateway);
       }
     });
   }
 
-  async storeGatewayAuthPayload(payloadHash, gatewayAddress, ispAddress, owner) {
-    const storeAuth = this.contract.methods.storeAuthNPayload(payloadHash, gatewayAddress, ispAddress).encodeABI();
-    const storeAuthTx = {
-      from: owner.address,
+  async verifyAuthPayload(payloadHash, routerIP, isp, txNonce) {
+    const routerIPInBytes = EthereumUtil.convertStringToByte(routerIP);
+    const verifyAuth = this.contract.methods.verifyAuthNGateway(payloadHash, routerIPInBytes).encodeABI();
+    const verifyAuthTx = {
+      from: isp.address,
       to: this.contractAddress,
-      nonce: this.nonce,
+      nonce: txNonce,
       gasLimit: 5000000,
       gasPrice: 5000000000,
-      data: storeAuth
+      data: verifyAuth
     };
-
-    const signedStoreAuthTx = CryptoUtil.signTransaction(owner.privateKey, storeAuthTx);
-    await EthereumUtil.sendTransaction(signedStoreAuthTx);
-
-    this.nonce++;
+  
+    const signedTx = CryptoUtil.signTransaction(isp.privateKey, verifyAuthTx);
+    if (!isBenchmarking()) EthereumUtil.sendTransaction(signedTx);
   }
 }
 

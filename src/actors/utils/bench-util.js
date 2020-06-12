@@ -18,7 +18,7 @@ class BenchUtil {
       overallRate: overallRate,
       amount: amount,
       duration: 1
-    }, log);
+    });
   }
 
   static runBenchmark(instance) {

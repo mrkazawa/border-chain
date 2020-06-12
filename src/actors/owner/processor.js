@@ -16,7 +16,6 @@ const {
 } = require('./config');
 
 class Processor {
-
   static async processStoredPayload(owner, auth, isp, gatewayAddres) {
     try {
       await db.set(gatewayAddres, true);
@@ -31,7 +30,7 @@ class Processor {
     try {
       await db.del(gateway.address);
 
-      // send gateway credentials to gateway
+      // send gateway credentials to gateway?
     } catch (err) {
       return new Error('Error when processing verified payload');
     }
@@ -58,7 +57,7 @@ class Processor {
     const body = {
       payload: payload
     };
-    const connections = 10;
+    const connections = 500;
     const overallRate = 0;
     const amount = 100000;
 
