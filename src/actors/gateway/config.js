@@ -23,4 +23,4 @@ module.exports = {
   ADMIN_SEED_ETHER_URL,
   VENDOR_AUTHN_URL,
   ETH_NETWORK_ID
-}
+};

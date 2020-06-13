@@ -14,4 +14,4 @@ module.exports = {
   ADMIN_ABI_URL,
   ADMIN_SEED_ETHER_URL,
   ETH_NETWORK_ID
-}
+};

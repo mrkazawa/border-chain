@@ -20,8 +20,8 @@ contract RegistryContract {
     mapping(address => address) trustedDevices;
 
     event NewPayloadAdded(address sender, bytes32 payloadHash, address target, address verifier);
-    event GatewayVerified(address sender, bytes32 payloadHash, address gateway, address verifier);
-    event DeviceVerified(address sender, address gateway, address device);
+    event GatewayVerified(address sender, bytes32 payloadHash, address gateway);
+    event DeviceVerified(address sender, bytes32 payloadHash, address gateway, address device);
     event GatewayRevoked(address sender, address gateway);
     event DeviceRevoked(address sender, address device);
 
@@ -103,8 +103,7 @@ contract RegistryContract {
         emit GatewayVerified(
             msg.sender,
             payloadHash,
-            payloads[payloadHash].target,
-            payloads[payloadHash].verifier
+            payloads[payloadHash].target
         );
     }
 
@@ -121,6 +120,7 @@ contract RegistryContract {
 
         emit DeviceVerified(
             msg.sender,
+            payloadHash,
             payloads[payloadHash].source,
             payloads[payloadHash].target
         );

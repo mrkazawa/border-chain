@@ -17,8 +17,7 @@ class Processor {
   static async processVerifiedPayload(payloadHash, gateway) {
     try {
       await db.del(payloadHash);
-
-      // store gateway in a peristent database?
+      // store list of verified gateway in a persistent database?
     } catch (err) {
       return new Error('Error when processing verified payload');
     }

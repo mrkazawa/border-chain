@@ -18,23 +18,11 @@ let REGISTERED_VENDOR;
 let REGISTERED_GATEWAY;
 let REGISTERED_DEVICE;
 
-// mock device properties
-const DEVICE_PROPERTIES = {
-  vendorId: 'samsung',
-  serialNumber: '1234-5678-1234-5678',
-  secretKey: 'secret',
-  fingerprint: 'cf23df2207d99a74fbe169e3eba035e633b65d94',
-  mac: '00-14-22-01-23-45'
-}
-
 const app = express();
 app.use(bodyParser.json());
 
 // GET contract ABI
 app.get('/contract-abi', (req, res) => res.send(REGISTRY_CONTRACT));
-
-// GET device properties
-app.get('/device-properties', (req, res) => res.send(DEVICE_PROPERTIES));
 
 // GET address and public key of registered ISP
 app.get('/isp', (req, res) => res.send(REGISTERED_ISP));
@@ -87,7 +75,7 @@ app.post('/gateway', (req, res) => {
     res.send(`New IoT gateway ${gateway.address} is registered`);
     
   } else {
-    res.status(401).send('Your request must include address and public key');
+    res.status(401).send('Your request must include address, public, and private key');
   }
 });
 
@@ -95,12 +83,16 @@ app.post('/gateway', (req, res) => {
 app.post('/device', (req, res) => {
   const device = req.body;
 
-  if (isBodyContainsAddress(device) && isBodyContainsPublicKey(device)) {
+  if (
+    isBodyContainsAddress(device) &&
+    isBodyContainsPublicKey(device) &&
+    isBodyContainsPrivateKey(device)
+  ) {
     REGISTERED_DEVICE = device;
     res.send(`New IoT device ${device.address} is registered`);
     
   } else {
-    res.status(401).send('Your request must include address and public key');
+    res.status(401).send('Your request must include address, public and private key');
   }
 });
 

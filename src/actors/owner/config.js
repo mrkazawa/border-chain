@@ -25,4 +25,4 @@ module.exports = {
   ISP_USER_REGISTRATION_URL,
   ISP_AUTHN_URL,
   ETH_NETWORK_ID
-}
+};
