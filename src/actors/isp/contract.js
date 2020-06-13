@@ -23,7 +23,6 @@ class Contract {
 
     this.contractAddress = abi.networks[ETH_NETWORK_ID].address;
     this.contract = EthereumUtil.constructSmartContract(abi.abi, this.contractAddress);
-    //this.nonce = 0;
   }
 
   addStoredPayloadEventListener(isp) {

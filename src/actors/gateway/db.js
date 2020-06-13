@@ -11,7 +11,7 @@ class DB {
     this.memcached = new Memcached('127.0.0.1:11211');
   }
 
-  set(key, value, ttl) {
+  set(key, value, ttl = 2592000) {
     return new Promise((resolve, reject) => {
       this.memcached.set(key, value, ttl, (err) => {
         if (err) reject(err);

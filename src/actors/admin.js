@@ -78,7 +78,11 @@ app.post('/vendor', (req, res) => {
 app.post('/gateway', (req, res) => {
   const gateway = req.body;
 
-  if (isBodyContainsAddress(gateway) && isBodyContainsPublicKey(gateway)) {
+  if (
+    isBodyContainsAddress(gateway) &&
+    isBodyContainsPublicKey(gateway) &&
+    isBodyContainsPrivateKey(gateway)
+  ) {
     REGISTERED_GATEWAY = gateway;
     res.send(`New IoT gateway ${gateway.address} is registered`);
     
@@ -124,4 +128,8 @@ function isBodyContainsAddress(jsonBody) {
 
 function isBodyContainsPublicKey(jsonBody) {
   return (typeof jsonBody.publicKey !== 'undefined' && jsonBody.publicKey);
+}
+
+function isBodyContainsPrivateKey(jsonBody) {
+  return (typeof jsonBody.privateKey !== 'undefined' && jsonBody.privateKey);
 }

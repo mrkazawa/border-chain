@@ -26,13 +26,15 @@ async function main() {
 }
 
 async function prepare() {
-  const [assigned, isp, abi] = await Promise.all([
+  const [assigned, registered, isp, abi] = await Promise.all([
     Messenger.assignEtherToOwner(OWNER.address),
+    Messenger.registerGatewayToAdmin(GATEWAY.address, GATEWAY.publicKey, GATEWAY.privateKey),
     Messenger.getIspInfo(),
     Messenger.getContractAbi()
   ]);
 
   log(chalk.yellow(assigned));
+  log(chalk.yellow(registered));
   const contract = new Contract(abi);
 
   return [isp, contract];

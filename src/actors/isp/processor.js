@@ -64,7 +64,7 @@ class Processor {
     if (user.password != payload.password || user.routerIP != payload.routerIP) return res.status(401).send('invalid user authentication payload!');
 
     try {
-      let txNonce = await db.get('txNonce');
+      const txNonce = await db.get('txNonce');
       contract.verifyAuthPayload(payloadHash, payload.routerIP, isp, txNonce);
       await db.incr('txNonce', 1);
 

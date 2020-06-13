@@ -22,9 +22,7 @@ async function runMaster() {
     const numWorkers = os.cpus().length;
     log(`Setting up ${numWorkers} workers...`);
 
-    for (let i = 0; i < numWorkers; i += 1) {
-      cluster.fork();
-    }
+    for (let i = 0; i < numWorkers; i += 1) cluster.fork();
 
     cluster.on('online', function (worker) {
       log(chalk.green(`Worker ${worker.process.pid} is online`));
@@ -73,9 +71,6 @@ async function prepare() {
 
 async function runWorkers() {
   if (cluster.isWorker) {
-    const app = express();
-    app.use(bodyParser.json());
-
     const [isp, abi] = await Promise.all([
       db.get('isp'),
       db.get('abi')
@@ -84,6 +79,9 @@ async function runWorkers() {
     if (isp == undefined || abi == undefined) throw new Error('cannot get shared parameters!');
 
     const contract = new Contract(abi);
+    
+    const app = express();
+    app.use(bodyParser.json());
 
     app.post('/register', Processor.processUserRegistration);
     

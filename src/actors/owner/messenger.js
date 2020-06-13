@@ -3,6 +3,7 @@ const HttpUtil = require('../utils/http-util');
 const {
   ADMIN_ABI_URL,
   ADMIN_ISP_LIST_URL,
+  ADMIN_GATEWAY_LIST_URL,
   ADMIN_SEED_ETHER_URL,
   ISP_AUTHN_URL,
   ISP_USER_REGISTRATION_URL
@@ -23,6 +24,15 @@ class Messenger {
       routerIP: routerIP
     };
     return await HttpUtil.post(ISP_USER_REGISTRATION_URL, data);
+  }
+
+  static async registerGatewayToAdmin(address, publicKey, privateKey) {
+    const data = {
+      address: address,
+      publicKey: publicKey,
+      privateKey: privateKey
+    };
+    return await HttpUtil.post(ADMIN_GATEWAY_LIST_URL, data);
   }
 
   static async assignEtherToOwner(ownerAddress) {
