@@ -4,9 +4,6 @@ const log = console.log;
 const Processor = require('./processor');
 const Messenger = require('./messenger');
 
-// should the device id is singed by the manufacturer,
-// so that we can check if this device really belongs to the manu.
-
 async function prepare() {
   const [device, vendor] = await Promise.all([
     Messenger.getDeviceInfo(),

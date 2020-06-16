@@ -8,6 +8,8 @@ const os = require('os');
 const HOSTNAME = os.hostname();
 const HTTP_PORT = process.env.HTTP_PORT || 3000;
 
+const EthereumUtil = require('../utils/ethereum-util');
+
 const Messenger = require('./messenger');
 const Processor = require('./processor');
 const Contract = require('./contract');
@@ -48,11 +50,13 @@ async function prepare() {
     const assigned = await Messenger.assignEtherToGateway(gateway.address);
     log(chalk.yellow(assigned));
 
+    const currentTxNonce = await EthereumUtil.getTransactionCount(gateway.address);
+
     await Promise.all([
       db.set('gateway', gateway),
       db.set('vendor', vendor),
       db.set('abi', abi),
-      db.set('txNonce', 0) // start nonce from 0
+      db.set('txNonce', currentTxNonce)
     ]);
 
     const contract = new Contract(abi);

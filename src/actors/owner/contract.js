@@ -19,7 +19,6 @@ class Contract {
 
     this.contractAddress = abi.networks[ETH_NETWORK_ID].address;
     this.contract = EthereumUtil.constructSmartContract(abi.abi, this.contractAddress);
-    this.nonce = 0;
   }
 
   addStoredPayloadEventListener(owner, auth, isp) {
@@ -59,11 +58,12 @@ class Contract {
   }
 
   async storeGatewayAuthPayload(payloadHash, gatewayAddress, ispAddress, owner) {
+    const nonce = await EthereumUtil.getTransactionCount(owner.address);
     const storeAuth = this.contract.methods.storeAuthNPayload(payloadHash, gatewayAddress, ispAddress).encodeABI();
     const storeAuthTx = {
       from: owner.address,
       to: this.contractAddress,
-      nonce: this.nonce,
+      nonce: nonce,
       gasLimit: 5000000,
       gasPrice: 5000000000,
       data: storeAuth
@@ -71,8 +71,6 @@ class Contract {
 
     const signedStoreAuthTx = CryptoUtil.signTransaction(owner.privateKey, storeAuthTx);
     await EthereumUtil.sendTransaction(signedStoreAuthTx);
-
-    this.nonce++;
   }
 }
 

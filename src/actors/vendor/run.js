@@ -9,6 +9,8 @@ const HOSTNAME = os.hostname();
 const HTTP_PORT = process.env.HTTP_PORT || 3000;
 
 const CryptoUtil = require('../utils/crypto-util');
+const EthereumUtil = require('../utils/ethereum-util');
+
 const Messenger = require('./messenger');
 const Processor = require('./processor');
 const Contract = require('./contract');
@@ -65,11 +67,13 @@ async function prepare() {
     log(chalk.yellow(vendorRegistered));
     log(chalk.yellow(deviceRegistered));
 
+    let currentTxNonce = await EthereumUtil.getTransactionCount(vendor.address);
+   
     await Promise.all([
       db.set('vendor', vendor),
       db.set('device', deviceProperties),
       db.set('abi', abi),
-      db.set('txNonce', 0) // start nonce from 0
+      db.set('txNonce', currentTxNonce)
     ]);
 
     const contract = new Contract(abi);

@@ -24,6 +24,10 @@ class EthereumUtil {
     return await web3.eth.getBalance(address);
   }
 
+  static async getTransactionCount(address) {
+    return await web3.eth.getTransactionCount(address, 'pending');
+  }
+
   static convertStringToByte(string) {
     return web3.utils.fromAscii(string);
   }
