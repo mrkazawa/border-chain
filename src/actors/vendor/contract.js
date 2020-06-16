@@ -36,7 +36,7 @@ class Contract {
       const verifier = event.returnValues['verifier'];
   
       if (verifier == vendor.address) {
-        log(`Receiving ${payloadHash} payload`);
+        log(chalk.yellow(`Receiving ${payloadHash} payload`));
 
         Processor.processStoredPayload(payloadHash, sender);
       }
