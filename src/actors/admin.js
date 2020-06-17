@@ -13,7 +13,6 @@ const HTTP_PORT = process.env.HTTP_PORT || 3000;
  */
 const REGISTRY_CONTRACT = require('../build/contracts/RegistryContract.json');
 
-let REGISTERED_ISP;
 let REGISTERED_VENDOR;
 let REGISTERED_GATEWAY;
 let REGISTERED_DEVICE;
@@ -24,9 +23,6 @@ app.use(bodyParser.json());
 // GET contract ABI
 app.get('/contract-abi', (req, res) => res.send(REGISTRY_CONTRACT));
 
-// GET address and public key of registered ISP
-app.get('/isp', (req, res) => res.send(REGISTERED_ISP));
-
 // GET address and public key of registered IoT vendor
 app.get('/vendor', (req, res) => res.send(REGISTERED_VENDOR));
 
@@ -35,19 +31,6 @@ app.get('/gateway', (req, res) => res.send(REGISTERED_GATEWAY));
 
 // GET address and public key of registered IoT device
 app.get('/device', (req, res) => res.send(REGISTERED_DEVICE));
-
-// POST add new ISP
-app.post('/isp', (req, res) => {
-  const isp = req.body;
-
-  if (isBodyContainsAddress(isp) && isBodyContainsPublicKey(isp)) {
-    REGISTERED_ISP = isp;
-    res.send(`New ISP ${isp.address} is registered`);
-    
-  } else {
-    res.status(401).send('Your request must include address and public key');
-  }
-});
 
 // POST add new IoT vendor
 app.post('/vendor', (req, res) => {

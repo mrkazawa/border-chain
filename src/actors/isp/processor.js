@@ -23,19 +23,29 @@ class Processor {
     }
   }
 
-  static async processUserRegistration(req, res) {
+  static async processUserRegistration(req, res, isp) {
     if (req.body.constructor === Object && Object.keys(req.body).length === 0) return res.status(401).send('your request does not have body!');
 
-    const username = req.body.username;
+    // a mock ip address for the owner
+    const routerIP = '200.100.10.10';
+
+    const address = req.body.address;
     const content = {
+      username: req.body.username,
       password: req.body.password,
-      routerIP: req.body.routerIP
+      routerIP: routerIP
     };
 
     try {
-      await db.set(username, content);
+      await db.set(address, content);
 
-      return res.status(200).send('user successfully registered!');
+      const payloadForOwner = {
+        address: isp.address,
+        publicKey: isp.publicKey,
+        routerIP: routerIP
+      }
+
+      return res.status(200).send(payloadForOwner);
     } catch (err) {
       log(`internal error: ${err}`);
       return res.status(500).send(`internal error: ${err}`);
@@ -58,9 +68,13 @@ class Processor {
     const isValid = CryptoUtil.verifyPayload(payloadSignature, payload, sender);
     if (!isValid) return res.status(401).send('invalid signature!');
 
-    const user = await db.get(payload.username);
+    const user = await db.get(sender);
     if (user == undefined) return res.status(404).send('user not found!');
-    if (user.password != payload.password || user.routerIP != payload.routerIP) return res.status(401).send('invalid user authentication payload!');
+    if (
+      user.username != payload.username ||
+      user.password != payload.password ||
+      user.routerIP != payload.routerIP
+    ) return res.status(401).send('invalid user authentication payload!');
 
     try {
       const txNonce = await db.get('txNonce');

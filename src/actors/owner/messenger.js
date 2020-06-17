@@ -2,7 +2,6 @@ const HttpUtil = require('../utils/http-util');
 
 const {
   ADMIN_ABI_URL,
-  ADMIN_ISP_LIST_URL,
   ADMIN_GATEWAY_LIST_URL,
   ADMIN_SEED_ETHER_URL,
   ISP_AUTHN_URL,
@@ -17,11 +16,11 @@ class Messenger {
     return await HttpUtil.post(ISP_AUTHN_URL, data);
   }
 
-  static async sendUserRegistrationToIsp(username, password, routerIP) {
+  static async sendUserRegistrationToIsp(address, username, password) {
     const data = {
+      address: address,
       username: username,
-      password: password,
-      routerIP: routerIP
+      password: password
     };
     return await HttpUtil.post(ISP_USER_REGISTRATION_URL, data);
   }
@@ -44,10 +43,6 @@ class Messenger {
 
   static async getContractAbi() {
     return await HttpUtil.get(ADMIN_ABI_URL);
-  }
-
-  static async getIspInfo() {
-    return await HttpUtil.get(ADMIN_ISP_LIST_URL);
   }
 }
 

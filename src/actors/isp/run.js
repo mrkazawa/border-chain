@@ -45,14 +45,12 @@ async function prepare() {
   try {
     const isp = CryptoUtil.createNewIdentity();
 
-    const [assigned, registered, abi] = await Promise.all([
+    const [assigned, abi] = await Promise.all([
       Messenger.assignEtherToIsp(isp.address),
-      Messenger.registerIspToAdmin(isp.address, isp.publicKey),
       Messenger.getContractAbi()
     ]);
 
     log(chalk.yellow(assigned));
-    log(chalk.yellow(registered));
 
     let currentTxNonce = await EthereumUtil.getTransactionCount(isp.address);
    
@@ -86,7 +84,9 @@ async function runWorkers() {
     const app = express();
     app.use(bodyParser.json());
 
-    app.post('/register', Processor.processUserRegistration);
+    app.post('/register', async (req, res) => {
+      Processor.processUserRegistration(req, res, isp);
+    });
     
     app.post('/authenticate', async (req, res) => {
       Processor.processDomainAuthentication(req, res, contract, isp);
