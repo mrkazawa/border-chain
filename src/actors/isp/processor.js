@@ -8,7 +8,13 @@ const db = new DB();
 class Processor {
   static async processStoredPayload(payloadHash, sender) {
     try {
-      await db.set(payloadHash, sender, 600);
+      const storedAuth = {
+        sender: sender,
+        isVerified: false,
+        isRevoked: false
+      }
+      await db.set(payloadHash, storedAuth);
+
     } catch (err) {
       return new Error('Error when processing stored payload');
     }
@@ -16,8 +22,14 @@ class Processor {
 
   static async processVerifiedPayload(payloadHash, gateway) {
     try {
-      await db.del(payloadHash);
-      // store list of verified gateway in a persistent database?
+      let storedAuth = await db.get(payloadHash);
+      if (storedAuth == undefined) return new Error('Payload not found');
+      else {
+        storedAuth.isVerified = true;
+        storedAuth.gateway = gateway;
+        await db.replace(payloadHash, storedAuth);
+      }
+
     } catch (err) {
       return new Error('Error when processing verified payload');
     }
@@ -30,14 +42,14 @@ class Processor {
     const routerIP = '200.100.10.10';
 
     const address = req.body.address;
-    const content = {
+    const user = {
       username: req.body.username,
       password: req.body.password,
       routerIP: routerIP
     };
 
     try {
-      await db.set(address, content);
+      await db.set(address, user);
 
       const payloadForOwner = {
         address: isp.address,
@@ -62,8 +74,11 @@ class Processor {
     const payloadSignature = payloadForISP.payloadSignature;
     const payloadHash = CryptoUtil.hashPayload(payload);
 
-    const sender = await db.get(payloadHash);
+    const storedAuth = await db.get(payloadHash);
+    const sender = storedAuth.sender;
+    const isVerified = storedAuth.isVerified;
     if (sender == undefined) return res.status(404).send('payload not found!');
+    if (isVerified) return res.status(401).send('replay? we already process this before!');
 
     const isValid = CryptoUtil.verifyPayload(payloadSignature, payload, sender);
     if (!isValid) return res.status(401).send('invalid signature!');

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.5.1;
 
-
 contract RegistryContract {
+    // TODO: add isRevoked, and add test case also
     struct AuthenticationPayload {
         address source; // the sender of the authentication payload
         address target; // the authentication target
@@ -19,9 +19,19 @@ contract RegistryContract {
     // key: device address, value: current gateway address
     mapping(address => address) trustedDevices;
 
-    event NewPayloadAdded(address sender, bytes32 payloadHash, address target, address verifier);
+    event NewPayloadAdded(
+        address sender,
+        bytes32 payloadHash,
+        address target,
+        address verifier
+    );
     event GatewayVerified(address sender, bytes32 payloadHash, address gateway);
-    event DeviceVerified(address sender, bytes32 payloadHash, address gateway, address device);
+    event DeviceVerified(
+        address sender,
+        bytes32 payloadHash,
+        address gateway,
+        address device
+    );
     event GatewayRevoked(address sender, address gateway);
     event DeviceRevoked(address sender, address device);
 
