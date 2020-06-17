@@ -52,7 +52,7 @@ class Contract {
       if (gateway == ourGateway.address) {
         log(chalk.yellow(`ISP ${sender} has verified payload ${payloadHash} for our gateway ${gateway}`));
 
-        Processor.processVerifiedPayload(ourGateway);
+        Processor.processVerifiedPayload(gateway, payloadHash);
       }
     });
   }

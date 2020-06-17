@@ -18,19 +18,21 @@ const {
 class Processor {
   static async processStoredPayload(owner, auth, isp, gatewayAddres) {
     try {
-      await db.set(gatewayAddres, true);
-      await Processor.prepareAndSendToISP(owner, auth, isp);
+      const exist = await db.get(gatewayAddres);
+      if (exist == undefined) await Processor.prepareAndSendToISP(owner, auth, isp);
+      else log(chalk.yellow(`we already process ${gatewayAddres} before`));
 
     } catch (err) {
       return new Error('Error when processing stored payload');
     }
   }
 
-  static async processVerifiedPayload(gateway) {
+  static async processVerifiedPayload(gatewayAddres, payloadHash) {
     try {
-      await db.del(gateway.address);
+      // store list of approved gateway address in the database
+      // this is useful for revocation use case
+      await db.set(gatewayAddres, payloadHash);
 
-      // send gateway credentials to gateway?
     } catch (err) {
       return new Error('Error when processing verified payload');
     }
