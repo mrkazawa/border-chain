@@ -6,7 +6,7 @@ const DB = require('./db');
 const db = new DB();
 
 class Processor {
-  static async processStoredPayload(payloadHash, sender) {
+  static async processNewPayloadAddedEvent(payloadHash, sender) {
     try {
       const storedAuth = {
         sender: sender,
@@ -16,14 +16,14 @@ class Processor {
       await db.set(payloadHash, storedAuth);
 
     } catch (err) {
-      return new Error('Error when processing stored payload');
+      throw new Error('error when processing NewPayloadAdded event!');
     }
   }
 
-  static async processVerifiedPayload(payloadHash, gateway) {
+  static async processGatewayVerifiedEvent(payloadHash, gateway) {
     try {
       let storedAuth = await db.get(payloadHash);
-      if (storedAuth == undefined) return new Error('Payload not found');
+      if (storedAuth == undefined) throw new Error('payload not found!');
       else {
         storedAuth.isVerified = true;
         storedAuth.gateway = gateway;
@@ -31,7 +31,7 @@ class Processor {
       }
 
     } catch (err) {
-      return new Error('Error when processing verified payload');
+      throw new Error('error when processing GatewayVerified event!');
     }
   }
 

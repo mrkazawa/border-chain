@@ -1,7 +1,6 @@
 const ADMIN_HOSTNAME = 'actor1.local';
 const ADMIN_PORT = 3000;
 const ADMIN_BASE_URL = 'http://' + ADMIN_HOSTNAME + ':' + ADMIN_PORT;
-const ADMIN_VENDOR_LIST_URL = ADMIN_BASE_URL + '/vendor';
 const ADMIN_DEVICE_LIST_URL = ADMIN_BASE_URL + '/device';
 
 // for gateway
@@ -19,7 +18,6 @@ const DEVICE_AUTHN_OPTION = {
 };
 
 module.exports = {
-  ADMIN_VENDOR_LIST_URL,
   ADMIN_DEVICE_LIST_URL,
   GATEWAY_AUTHN_URL,
   DEVICE_AUTHN_OPTION

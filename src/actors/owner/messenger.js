@@ -34,11 +34,9 @@ class Messenger {
     return await HttpUtil.post(ADMIN_GATEWAY_LIST_URL, data);
   }
 
-  static async assignEtherToOwner(ownerAddress) {
-    const data = {
-      address: ownerAddress
-    };
-    return await HttpUtil.post(ADMIN_SEED_ETHER_URL, data);
+  static async seedEtherToOwner(ownerAddress) {
+    const url = ADMIN_SEED_ETHER_URL + '/?address=' + ownerAddress;
+    return await HttpUtil.get(url);
   }
 
   static async getContractAbi() {

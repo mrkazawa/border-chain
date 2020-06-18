@@ -2,7 +2,6 @@ const HttpUtil = require('../utils/http-util');
 
 const {
   ADMIN_GATEWAY_LIST_URL,
-  ADMIN_VENDOR_LIST_URL,
   ADMIN_ABI_URL,
   ADMIN_SEED_ETHER_URL,
   VENDOR_AUTHN_URL,
@@ -29,10 +28,6 @@ class Messenger {
 
   static async getGatewayInfo() {
     return await HttpUtil.get(ADMIN_GATEWAY_LIST_URL);
-  }
-
-  static async getVendorInfo() {
-    return await HttpUtil.get(ADMIN_VENDOR_LIST_URL);
   }
 }
 

@@ -45,12 +45,14 @@ async function prepare() {
   try {
     const isp = CryptoUtil.createNewIdentity();
 
-    const [assigned, abi] = await Promise.all([
-      Messenger.assignEtherToIsp(isp.address),
-      Messenger.getContractAbi()
+    const [assigned, abi, registered] = await Promise.all([
+      Messenger.seedEtherToIsp(isp.address),
+      Messenger.getContractAbi(),
+      Messenger.registerIspToAdmin(isp)
     ]);
 
     log(chalk.yellow(assigned));
+    log(chalk.yellow(registered));
 
     let currentTxNonce = await EthereumUtil.getTransactionCount(isp.address);
    
@@ -65,8 +67,7 @@ async function prepare() {
     return [contract, isp];
 
   } catch (err) {
-    log(chalk.red(err));
-    return new Error('Error when preparing');
+    throw new Error('error when preparing!');
   }
 }
 

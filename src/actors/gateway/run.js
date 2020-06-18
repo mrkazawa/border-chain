@@ -34,16 +34,15 @@ async function runMaster() {
       cluster.fork();
     });
 
-    const [contract, gateway, vendor] = await prepare();
-    contract.addStoredPayloadEventListener(gateway, vendor);
+    const [contract, gateway] = await prepare();
+    contract.addStoredPayloadEventListener(gateway);
   }
 }
 
 async function prepare() {
   try {
-    const [gateway, vendor, abi] = await Promise.all([
+    const [gateway, abi] = await Promise.all([
       Messenger.getGatewayInfo(),
-      Messenger.getVendorInfo(),
       Messenger.getContractAbi()
     ]);
 
@@ -54,13 +53,12 @@ async function prepare() {
 
     await Promise.all([
       db.set('gateway', gateway),
-      db.set('vendor', vendor),
       db.set('abi', abi),
       db.set('txNonce', currentTxNonce)
     ]);
 
     const contract = new Contract(abi);
-    return [contract, gateway, vendor];
+    return [contract, gateway];
 
   } catch (err) {
     log(chalk.red(err));
@@ -70,9 +68,8 @@ async function prepare() {
 
 async function runWorkers() {
   if (cluster.isWorker) {
-    const [gateway, vendor, abi] = await Promise.all([
+    const [gateway, abi] = await Promise.all([
       db.get('gateway'),
-      db.get('vendor'),
       db.get('abi')
     ]);
 
@@ -84,7 +81,7 @@ async function runWorkers() {
     app.use(bodyParser.json());
 
     app.post('/authenticate', async (req, res) => {
-      Processor.processDeviceAuthentication(req, res, contract, gateway, vendor);
+      Processor.processDeviceAuthentication(req, res, contract, gateway);
     });
 
     app.listen(HTTP_PORT, () => {

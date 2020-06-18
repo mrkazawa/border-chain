@@ -38,7 +38,7 @@ class Contract {
       if (verifier == isp.address) {
         log(chalk.yellow(`Receiving ${payloadHash} payload`));
         
-        Processor.processStoredPayload(payloadHash, sender);
+        Processor.processNewPayloadAddedEvent(payloadHash, sender);
       }
     });
   }
@@ -56,7 +56,7 @@ class Contract {
       if (sender == isp.address) {
         log(chalk.yellow(`Verified payload ${payloadHash}`));
 
-        Processor.processVerifiedPayload(payloadHash, gateway);
+        Processor.processGatewayVerifiedEvent(payloadHash, gateway);
       }
     });
   }

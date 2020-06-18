@@ -1,21 +1,12 @@
 const HttpUtil = require('../utils/http-util');
 
 const {
-  ADMIN_VENDOR_LIST_URL,
   ADMIN_DEVICE_LIST_URL,
   ADMIN_ABI_URL,
   ADMIN_SEED_ETHER_URL
 } = require('./config');
 
 class Messenger {
-  static async registerVendorToAdmin(address, publicKey) {
-    const data = {
-      address: address,
-      publicKey: publicKey
-    };
-    return await HttpUtil.post(ADMIN_VENDOR_LIST_URL, data);
-  }
-
   static async registerDeviceToAdmin(deviceProperties) {
     const data = deviceProperties;
     return await HttpUtil.post(ADMIN_DEVICE_LIST_URL, data);

@@ -25,7 +25,19 @@ const db = new DB();
 async function runMaster() {
   if (cluster.isMaster) {
     const numWorkers = os.cpus().length;
-    settingUpWorkers(numWorkers);
+    log(`Setting up ${numWorkers} workers...`);
+
+    for (let i = 0; i < numWorkers; i += 1) cluster.fork();
+
+    cluster.on('online', function (worker) {
+      log(chalk.green(`Worker ${worker.process.pid} is online`));
+    });
+
+    cluster.on('exit', function (worker, code, signal) {
+      log(chalk.red(`Worker ${worker.process.pid} died with code: ${code}, and signal: ${signal}`));
+      log(`Starting a new worker`);
+      cluster.fork();
+    });
 
     const [contract, vendor] = await prepare();
     contract.addStoredPayloadEventListener(vendor);
@@ -33,42 +45,24 @@ async function runMaster() {
   }
 }
 
-function settingUpWorkers(numWorkers) {
-  log(`Setting up ${numWorkers} workers...`);
-
-  for (let i = 0; i < numWorkers; i += 1) cluster.fork();
-
-  cluster.on('online', function (worker) {
-    log(chalk.green(`Worker ${worker.process.pid} is online`));
-  });
-
-  cluster.on('exit', function (worker, code, signal) {
-    log(chalk.red(`Worker ${worker.process.pid} died with code: ${code}, and signal: ${signal}`));
-    log(`Starting a new worker`);
-    cluster.fork();
-  });
-}
-
 async function prepare() {
   try {
     const vendor = CryptoUtil.createNewIdentity();
     const device = CryptoUtil.createNewIdentity();
     const signature = CryptoUtil.signPayload(vendor.privateKey, device.address);
-    const deviceProperties = appendToDeviceProperties(DEVICE_PROPERTIES, signature, device);
+    const deviceProperties = appendToDeviceProperties(DEVICE_PROPERTIES, signature, device, vendor);
 
-    const [assigned, vendorRegistered, deviceRegistered, abi] = await Promise.all([
+    const [assigned, registeres, abi] = await Promise.all([
       Messenger.assignEtherToVendor(vendor.address),
-      Messenger.registerVendorToAdmin(vendor.address, vendor.publicKey),
       Messenger.registerDeviceToAdmin(deviceProperties),
       Messenger.getContractAbi()
     ]);
 
     log(chalk.yellow(assigned));
-    log(chalk.yellow(vendorRegistered));
-    log(chalk.yellow(deviceRegistered));
+    log(chalk.yellow(registeres));
 
     let currentTxNonce = await EthereumUtil.getTransactionCount(vendor.address);
-   
+
     await Promise.all([
       db.set('vendor', vendor),
       db.set('device', deviceProperties),
@@ -85,11 +79,13 @@ async function prepare() {
   }
 }
 
-function appendToDeviceProperties(deviceProperties, signature, device) {
+function appendToDeviceProperties(deviceProperties, signature, device, vendor) {
   deviceProperties.signature = signature;
   deviceProperties.address = device.address;
   deviceProperties.publicKey = device.publicKey;
   deviceProperties.privateKey = device.privateKey;
+  deviceProperties.vendorAddress = vendor.address;
+  deviceProperties.vendorPublicKey = vendor.publicKey;
 
   return deviceProperties;
 }

@@ -10,19 +10,14 @@ const OWNER = CryptoUtil.createNewIdentity();
 const GATEWAY = CryptoUtil.createNewIdentity();
 
 async function main() {
-  const contract = await prepare();
-  if (contract == undefined) throw new Error('Error when preparing');
-
-  const user = createUserCredential();
-  const ispInfo = await Messenger.sendUserRegistrationToIsp(OWNER.address, user.username, user.password);
+  const [contract, user, ispInfo] = await prepare();
+  const auth = createAuthenticationPayload(user, ispInfo.routerIP);
+  const authHash = CryptoUtil.hashPayload(auth);
 
   const isp = {
     address: ispInfo.address,
     publicKey: ispInfo.publicKey
   }
-
-  const auth = createAuthenticationPayload(user, ispInfo.routerIP);
-  const authHash = CryptoUtil.hashPayload(auth);
 
   contract.addStoredPayloadEventListener(OWNER, auth, isp);
   contract.addGatewayVerifiedEventListener(GATEWAY);
@@ -30,17 +25,26 @@ async function main() {
 }
 
 async function prepare() {
-  const [assigned, registered, abi] = await Promise.all([
-    Messenger.assignEtherToOwner(OWNER.address),
-    Messenger.registerGatewayToAdmin(GATEWAY.address, GATEWAY.publicKey, GATEWAY.privateKey),
-    Messenger.getContractAbi()
-  ]);
+  try {
+    const [assigned, registered, abi] = await Promise.all([
+      Messenger.seedEtherToOwner(OWNER.address),
+      Messenger.registerGatewayToAdmin(GATEWAY.address, GATEWAY.publicKey, GATEWAY.privateKey),
+      Messenger.getContractAbi()
+    ]);
 
-  log(chalk.yellow(assigned));
-  log(chalk.yellow(registered));
-  const contract = new Contract(abi);
+    log(chalk.yellow(assigned));
+    log(chalk.yellow(registered));
 
-  return contract;
+    const contract = new Contract(abi);
+    const user = createUserCredential();
+    const ispInfo = await Messenger.sendUserRegistrationToIsp(OWNER.address, user.username, user.password);
+
+    return [contract, user, ispInfo];
+
+  } catch (err) {
+    throw new Error('error when preparing!');
+  }
+
 }
 
 function createUserCredential() {

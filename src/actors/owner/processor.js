@@ -16,25 +16,30 @@ const {
 } = require('./config');
 
 class Processor {
-  static async processStoredPayload(owner, auth, isp, gatewayAddres) {
+  static async processNewPayloadAddedEvent(payloadHash, owner, auth, isp) {
     try {
-      const exist = await db.get(gatewayAddres);
-      if (exist == undefined) await Processor.prepareAndSendToISP(owner, auth, isp);
-      else log(chalk.yellow(`we already process ${gatewayAddres} before`));
+      const exist = await db.get(payloadHash);
+      if (!exist || !exist.isVerified) await Processor.prepareAndSendToISP(owner, auth, isp);
+      else log(chalk.yellow(`we already process ${payloadHash} before`));
 
     } catch (err) {
-      return new Error('Error when processing stored payload');
+      return new Error('error when processing NewPayloadAdded event!');
     }
   }
 
-  static async processVerifiedPayload(gatewayAddres, payloadHash) {
+  static async processGatewayVerifiedEvent(gatewayAddres, payloadHash) {
     try {
       // store list of approved gateway address in the database
       // this is useful for revocation use case
-      await db.set(gatewayAddres, payloadHash);
+      const storedAuth = {
+        gateway: gatewayAddres,
+        isVerified: true,
+        isRevoked: false
+      }
+      await db.set(payloadHash, storedAuth);
 
     } catch (err) {
-      return new Error('Error when processing verified payload');
+      return new Error('error when processing GatewayVerified event!');
     }
   }
 

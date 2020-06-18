@@ -38,19 +38,6 @@ class DB {
     });
   }
 
-  getAndDel(key) {
-    return new Promise((resolve, reject) => {
-      this.memcached.get(key, (err, data) => {
-        if (err) reject(err);
-
-        this.memcached.del(key, (err) => {
-          if (err) reject(err);
-          resolve(data);
-        });
-      });
-    })
-  }
-
   incr(key, increment) {
     return new Promise((resolve, reject) => {
       this.memcached.incr(key, increment, (err) => {

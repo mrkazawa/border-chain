@@ -4,7 +4,7 @@ const ADMIN_PORT = 3000;
 const ADMIN_BASE_URL = 'http://' + ADMIN_HOSTNAME + ':' + ADMIN_PORT;
 const ADMIN_GATEWAY_LIST_URL = ADMIN_BASE_URL + '/gateway';
 const ADMIN_ABI_URL = ADMIN_BASE_URL + '/contract-abi';
-const ADMIN_SEED_ETHER_URL = ADMIN_BASE_URL + '/ether';
+const ADMIN_SEED_ETHER_URL = ADMIN_BASE_URL + '/seed-ether';
 
 // for isp
 const ISP_HOSTNAME = 'actor4.local';

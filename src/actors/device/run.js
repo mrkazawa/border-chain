@@ -4,20 +4,12 @@ const log = console.log;
 const Processor = require('./processor');
 const Messenger = require('./messenger');
 
-async function prepare() {
-  const [device, vendor] = await Promise.all([
-    Messenger.getDeviceInfo(),
-    Messenger.getVendorInfo()
-  ]);
-
-  return [device, vendor];
-}
-
 async function main(option) {
-  const [device, vendor] = await prepare();
-  const [authHash, auth] = await Processor.preparePayload(option, device, vendor);
+  const device = await Messenger.getDeviceInfo();
+  if (!device) throw new Error('cannot get device properties');
 
-  Processor.sendAuthPayloadToGateway(authHash, auth, option, device.vendorId, device.address);
+  const [authHash, auth] = await Processor.preparePayload(option, device);
+  Processor.sendAuthPayloadToGateway(authHash, auth, option, device);
 }
 
 if (process.argv.length !== 3) {

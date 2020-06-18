@@ -19,16 +19,14 @@ const {
 } = require('./config');
 
 class Processor {
-  static async processStoredPayload(payloadHash, gateway, vendor) {
+  static async processStoredPayload(payloadHash, gateway) {
     const storedPayload = await db.get(payloadHash);
-    if (storedPayload && storedPayload != undefined) {
-      Processor.prepareAndSendToVendor(gateway, vendor, storedPayload);
-    } else {
-      log(chalk.red(`Error, cannot find stored payload for ${payloadHash}`));
-    }
+    if (!storedPayload) log(chalk.red(`${payloadHash} not found`));
+    else if (storedPayload.isVerified) log(chalk.red(`${payloadHash} already verified`));
+    else Processor.prepareAndSendToVendor(gateway, storedPayload);
   }
 
-  static async prepareAndSendToVendor(gateway, vendor, storedPayload) {
+  static async prepareAndSendToVendor(gateway, storedPayload) {
     const payloadSignature = CryptoUtil.signPayload(gateway.privateKey, storedPayload);
     const payloadForVendor = {
       payload: storedPayload,
@@ -58,35 +56,41 @@ class Processor {
     BenchUtil.runBenchmark(instance);
   }
 
-  static async processDeviceAuthentication(req, res, contract, gateway, vendor) {
+  static async processDeviceAuthentication(req, res, contract, gateway) {
     if (req.body.constructor === Object && Object.keys(req.body).length === 0) return res.status(401).send('your request does not have body!');
     const payload = req.body.payload;
 
-    let payloadHash;
+    /*let payloadHash;
     if (!isBenchmarkingGateway()) payloadHash = payload.authHash;
-    else payloadHash = CryptoUtil.hashPayload(Date.now());
+    else payloadHash = CryptoUtil.hashPayload(Date.now());*/
 
+    const payloadHash = payload.authHash
     const auth = payload.auth;
     const authOption = payload.authOption;
-    const vendorId = payload.vendorId;
-    const deviceId = payload.deviceId;
+    const signature = payload.signature;
+    const vendorAddress = payload.vendorAddress;
+    const deviceAddress = payload.deviceAddress;
 
     const exist = await db.get(payloadHash);
     if (!isBenchmarkingGateway() && exist && exist != undefined) return res.status(401).send('we already process this hash before!');
+
+    const isValid = CryptoUtil.verifyPayload(signature, deviceAddress, vendorAddress);
+    if (!isValid) return res.status(401).send('the device signature is invalid!');
 
     const storedPayload = {
       auth: auth,
       authHash: payloadHash,
       authOption: authOption,
-      vendorId: vendorId,
-      deviceId: deviceId
+      signature: signature,
+      vendorAddress: vendorAddress,
+      deviceAddress: deviceAddress,
+      isVerified: false
     }
 
     try {
-      await db.set(payloadHash, storedPayload, 600);
+      await db.set(payloadHash, storedPayload);
       const txNonce = await db.get('txNonce');
-
-      contract.storeAuthPayload(payloadHash, deviceId, vendor.address, gateway, txNonce);
+      contract.storeAuthPayload(payloadHash, deviceAddress, vendorAddress, gateway, txNonce);
       await db.incr('txNonce', 1);
 
       res.status(200).send('payload received, forwarding to vendor!');

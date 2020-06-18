@@ -25,7 +25,7 @@ class Contract {
     this.contract = EthereumUtil.constructSmartContract(abi.abi, this.contractAddress);
   }
 
-  addStoredPayloadEventListener(gateway, vendor) {
+  addStoredPayloadEventListener(gateway) {
     this.contract.events.NewPayloadAdded({
       fromBlock: 0
     }, async function (error, event) {
@@ -37,7 +37,7 @@ class Contract {
       if (sender == gateway.address) {
         log(chalk.yellow(`Receiving ${payloadHash} payload`));
 
-        Processor.processStoredPayload(payloadHash, gateway, vendor);
+        Processor.processStoredPayload(payloadHash, gateway);
       }
     });
   }

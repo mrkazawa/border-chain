@@ -2,7 +2,6 @@
 const ADMIN_HOSTNAME = 'actor1.local';
 const ADMIN_PORT = 3000;
 const ADMIN_BASE_URL = 'http://' + ADMIN_HOSTNAME + ':' + ADMIN_PORT;
-const ADMIN_VENDOR_LIST_URL = ADMIN_BASE_URL + '/vendor';
 const ADMIN_DEVICE_LIST_URL = ADMIN_BASE_URL + '/device';
 const ADMIN_ABI_URL = ADMIN_BASE_URL + '/contract-abi';
 const ADMIN_SEED_ETHER_URL = ADMIN_BASE_URL + '/ether';
@@ -17,7 +16,6 @@ const DEVICE_AUTHN_OPTION = {
 
 // mock device properties
 const DEVICE_PROPERTIES = {
-  vendorId: 'samsung',
   serialNumber: '1234-5678-1234-5678',
   secretKey: 'secret',
   fingerprint: 'cf23df2207d99a74fbe169e3eba035e633b65d94',
@@ -28,7 +26,6 @@ const DEVICE_PROPERTIES = {
 const ETH_NETWORK_ID = 2020;
 
 module.exports = {
-  ADMIN_VENDOR_LIST_URL,
   ADMIN_DEVICE_LIST_URL,
   ADMIN_ABI_URL,
   ADMIN_SEED_ETHER_URL,

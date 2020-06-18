@@ -15,10 +15,10 @@ const {
 } = require('./config');
 
 class Processor {
-  static async preparePayload(option, device, vendor) {
+  static async preparePayload(option, device) {
     switch (option) {
       case DEVICE_AUTHN_OPTION.PKE:
-        return await Processor.constructPublicKeyPayload(device, vendor);
+        return await Processor.constructPublicKeyPayload(device);
   
       case DEVICE_AUTHN_OPTION.SKE:
         return Processor.constructSecretKeyPayload(device);
@@ -31,7 +31,7 @@ class Processor {
     }
   }
 
-  static async constructPublicKeyPayload(device, vendor) {
+  static async constructPublicKeyPayload(device) {
     const auth = {
       serialNumber: device.serialNumber,
       timestamp: Date.now(),
@@ -45,7 +45,7 @@ class Processor {
     }
   
     const authHash = CryptoUtil.hashPayload(auth);
-    const encrypted = await CryptoUtil.encryptPayload(vendor.publicKey, authPayload);
+    const encrypted = await CryptoUtil.encryptPayload(device.vendorPublicKey, authPayload);
     
     return [authHash, encrypted];
   }
@@ -87,13 +87,14 @@ class Processor {
     return [authHash, auth];
   }
 
-  static async sendAuthPayloadToGateway(authHash, auth, option, vendorId, deviceId) {
+  static async sendAuthPayloadToGateway(authHash, auth, option, device) {
     const authForGateway = {
       authHash: authHash,
       auth: auth,
       authOption: option,
-      vendorId: vendorId,
-      deviceId: deviceId
+      signature: device.signature,
+      deviceAddress: device.address,
+      vendorAddress: device.vendorAddress
     };
 
     if (isBenchmarking()) Processor.benchmark(authForGateway);
