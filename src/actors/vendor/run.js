@@ -40,7 +40,7 @@ async function runMaster() {
     });
 
     const [contract, vendor] = await prepare();
-    contract.addStoredPayloadEventListener(vendor);
+    contract.addNewPayloadAddedEventListener(vendor);
     contract.addDeviceVerifiedEventListener(vendor);
   }
 }
@@ -52,14 +52,16 @@ async function prepare() {
     const signature = CryptoUtil.signPayload(vendor.privateKey, device.address);
     const deviceProperties = appendToDeviceProperties(DEVICE_PROPERTIES, signature, device, vendor);
 
-    const [assigned, registeres, abi] = await Promise.all([
-      Messenger.assignEtherToVendor(vendor.address),
+    const [assigned, deviceRegistered, vendorRegistered, abi] = await Promise.all([
+      Messenger.seedEtherToVendor(vendor.address),
       Messenger.registerDeviceToAdmin(deviceProperties),
+      Messenger.registerVendorToAdmin(vendor),
       Messenger.getContractAbi()
     ]);
 
     log(chalk.yellow(assigned));
-    log(chalk.yellow(registeres));
+    log(chalk.yellow(deviceRegistered));
+    log(chalk.yellow(vendorRegistered));
 
     let currentTxNonce = await EthereumUtil.getTransactionCount(vendor.address);
 
@@ -74,8 +76,7 @@ async function prepare() {
     return [contract, vendor];
 
   } catch (err) {
-    log(chalk.red(err));
-    return new Error('Error when preparing');
+    throw new Error('error when preparing!');
   }
 }
 
@@ -98,7 +99,7 @@ async function runWorkers() {
       db.get('abi')
     ]);
 
-    if (vendor == undefined || device == undefined || abi == undefined) throw new Error('Worker cannot get shared parameters');
+    if (vendor == undefined || device == undefined || abi == undefined) throw new Error('worker cannot get shared parameters!');
 
     const contract = new Contract(abi);
 

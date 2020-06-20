@@ -36,7 +36,7 @@ async function runMaster() {
     });
 
     const [contract, isp] = await prepare();
-    contract.addStoredPayloadEventListener(isp);
+    contract.addNewPayloadAddedEventListener(isp);
     contract.addGatewayVerifiedEventListener(isp);
   }
 }

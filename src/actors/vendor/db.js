@@ -20,6 +20,15 @@ class DB {
     });
   }
 
+  replace(key, value, ttl = 2592000) {
+    return new Promise((resolve, reject) => {
+      this.memcached.replace(key, value, ttl, (err) => {
+        if (err) reject(err);
+        resolve(true);
+      });
+    });
+  }
+
   get(key) {
     return new Promise((resolve, reject) => {
       this.memcached.get(key, (err, data) => {
@@ -36,19 +45,6 @@ class DB {
         resolve(true);
       });
     });
-  }
-
-  getAndDel(key) {
-    return new Promise((resolve, reject) => {
-      this.memcached.get(key, (err, data) => {
-        if (err) reject(err);
-
-        this.memcached.del(key, (err) => {
-          if (err) reject(err);
-          resolve(data);
-        });
-      });
-    })
   }
 
   incr(key, increment) {

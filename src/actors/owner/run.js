@@ -19,9 +19,9 @@ async function main() {
     publicKey: ispInfo.publicKey
   }
 
-  contract.addStoredPayloadEventListener(OWNER, auth, isp);
+  contract.addNewPayloadAddedEventListener(OWNER, auth, isp);
   contract.addGatewayVerifiedEventListener(GATEWAY);
-  contract.storeGatewayAuthPayload(authHash, GATEWAY.address, isp.address, OWNER);
+  contract.storeAuthNPayload(authHash, GATEWAY.address, isp.address, OWNER);
 }
 
 async function prepare() {

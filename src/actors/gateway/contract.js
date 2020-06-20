@@ -25,7 +25,7 @@ class Contract {
     this.contract = EthereumUtil.constructSmartContract(abi.abi, this.contractAddress);
   }
 
-  addStoredPayloadEventListener(gateway) {
+  addNewPayloadAddedEventListener(gateway) {
     this.contract.events.NewPayloadAdded({
       fromBlock: 0
     }, async function (error, event) {
@@ -37,12 +37,12 @@ class Contract {
       if (sender == gateway.address) {
         log(chalk.yellow(`Receiving ${payloadHash} payload`));
 
-        Processor.processStoredPayload(payloadHash, gateway);
+        Processor.processNewPayloadAddedEvent(payloadHash, gateway);
       }
     });
   }
 
-  storeAuthPayload(authHash, deviceAddress, vendorAddress, gateway, txNonce) {
+  storeAuthNPayload(authHash, deviceAddress, vendorAddress, gateway, txNonce) {
     const storeAuth = this.contract.methods.storeAuthNPayload(authHash, deviceAddress, vendorAddress).encodeABI();
     const storeAuthTx = {
       from: gateway.address,

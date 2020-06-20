@@ -35,7 +35,7 @@ async function runMaster() {
     });
 
     const [contract, gateway] = await prepare();
-    contract.addStoredPayloadEventListener(gateway);
+    contract.addNewPayloadAddedEventListener(gateway);
   }
 }
 
@@ -46,7 +46,7 @@ async function prepare() {
       Messenger.getContractAbi()
     ]);
 
-    const assigned = await Messenger.assignEtherToGateway(gateway.address);
+    const assigned = await Messenger.seedEtherToGateway(gateway.address);
     log(chalk.yellow(assigned));
 
     const currentTxNonce = await EthereumUtil.getTransactionCount(gateway.address);
@@ -61,8 +61,7 @@ async function prepare() {
     return [contract, gateway];
 
   } catch (err) {
-    log(chalk.red(err));
-    return new Error('Error when preparing');
+    throw new Error('error when preparing!');
   }
 }
 
@@ -73,7 +72,7 @@ async function runWorkers() {
       db.get('abi')
     ]);
 
-    if (gateway == undefined || vendor == undefined || abi == undefined) throw new Error('Worker cannot get shared parameters');
+    if (gateway == undefined || abi == undefined) throw new Error('worker cannot get shared parameters!');
 
     const contract = new Contract(abi);
 

@@ -1,7 +1,7 @@
 const HttpUtil = require('../utils/http-util');
 
 const {
-  ADMIN_GATEWAY_LIST_URL,
+  ADMIN_GATEWAY_INFO_URL,
   ADMIN_ABI_URL,
   ADMIN_SEED_ETHER_URL,
   VENDOR_AUTHN_URL,
@@ -15,11 +15,9 @@ class Messenger {
     return await HttpUtil.post(VENDOR_AUTHN_URL, data);
   }
 
-  static async assignEtherToGateway(gatewayAddress) {
-    const data = {
-      address: gatewayAddress
-    };
-    return await HttpUtil.post(ADMIN_SEED_ETHER_URL, data);
+  static async seedEtherToGateway(gatewayAddress) {
+    const url = ADMIN_SEED_ETHER_URL + '/?address=' + gatewayAddress;
+    return await HttpUtil.get(url);
   }
 
   static async getContractAbi() {
@@ -27,7 +25,7 @@ class Messenger {
   }
 
   static async getGatewayInfo() {
-    return await HttpUtil.get(ADMIN_GATEWAY_LIST_URL);
+    return await HttpUtil.get(ADMIN_GATEWAY_INFO_URL);
   }
 }
 

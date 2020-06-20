@@ -21,7 +21,7 @@ class Contract {
     this.contract = EthereumUtil.constructSmartContract(abi.abi, this.contractAddress);
   }
 
-  addStoredPayloadEventListener(owner, auth, isp) {
+  addNewPayloadAddedEventListener(owner, auth, isp) {
     this.contract.events.NewPayloadAdded({
       fromBlock: 0
     }, function (error, event) {
@@ -56,7 +56,7 @@ class Contract {
     });
   }
 
-  async storeGatewayAuthPayload(payloadHash, gatewayAddress, ispAddress, owner) {
+  async storeAuthNPayload(payloadHash, gatewayAddress, ispAddress, owner) {
     const nonce = await EthereumUtil.getTransactionCount(owner.address);
     const storeAuth = this.contract.methods.storeAuthNPayload(payloadHash, gatewayAddress, ispAddress).encodeABI();
     const storeAuthTx = {

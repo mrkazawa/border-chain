@@ -15,12 +15,12 @@ const {
 } = require('./config');
 
 class Processor {
-  static async preparePayload(option, device) {
+  static preparePayload(option, device) {
     switch (option) {
-      case DEVICE_AUTHN_OPTION.PKE:
-        return await Processor.constructPublicKeyPayload(device);
+      case DEVICE_AUTHN_OPTION.PKSIG:
+        return Processor.constructPublicKeyPayload(device);
   
-      case DEVICE_AUTHN_OPTION.SKE:
+      case DEVICE_AUTHN_OPTION.HMAC:
         return Processor.constructSecretKeyPayload(device);
   
       case DEVICE_AUTHN_OPTION.FINGERPRINT:
@@ -31,7 +31,7 @@ class Processor {
     }
   }
 
-  static async constructPublicKeyPayload(device) {
+  static constructPublicKeyPayload(device) {
     const auth = {
       serialNumber: device.serialNumber,
       timestamp: Date.now(),
@@ -39,15 +39,13 @@ class Processor {
     };
   
     const authSignature = CryptoUtil.signPayload(device.privateKey, auth);
+    const authHash = CryptoUtil.hashPayload(auth);
     const authPayload = {
       auth: auth,
       authSignature: authSignature
-    }
-  
-    const authHash = CryptoUtil.hashPayload(auth);
-    const encrypted = await CryptoUtil.encryptPayload(device.vendorPublicKey, authPayload);
+    };
     
-    return [authHash, encrypted];
+    return [authHash, authPayload];
   }
   
   static constructSecretKeyPayload(device) {
@@ -55,12 +53,16 @@ class Processor {
       serialNumber: device.serialNumber,
       timestamp: Date.now(),
       nonce: CryptoUtil.randomValueBase64(64)
+    };
+  
+    const authSignature = CryptoUtil.signDigest(device.secretKey, auth);
+    const authHash = CryptoUtil.hashPayload(auth);
+    const authPayload = {
+      auth: auth,
+      authSignature: authSignature
     }
   
-    const authHash = CryptoUtil.hashPayload(auth);
-    const encrypted = CryptoUtil.encryptSymmetrically(device.secretKey, auth);
-  
-    return [authHash, encrypted];
+    return [authHash, authPayload];
   }
   
   static constructFingerprintPayload(device) {
@@ -94,7 +96,8 @@ class Processor {
       authOption: option,
       signature: device.signature,
       deviceAddress: device.address,
-      vendorAddress: device.vendorAddress
+      vendorAddress: device.vendorAddress,
+      vendorPublicKey: device.vendorPublicKey
     };
 
     if (isBenchmarking()) Processor.benchmark(authForGateway);

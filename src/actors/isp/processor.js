@@ -93,7 +93,7 @@ class Processor {
 
     try {
       const txNonce = await db.get('txNonce');
-      contract.verifyAuthPayload(payloadHash, payload.routerIP, isp, txNonce);
+      contract.verifyAuthNGateway(payloadHash, payload.routerIP, isp, txNonce);
       await db.incr('txNonce', 1);
 
       return res.status(200).send('authentication attempt successful!');

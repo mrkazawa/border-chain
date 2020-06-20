@@ -10,20 +10,32 @@ const {
 } = require('./config');
 
 class Processor {
-  static async processStoredPayload(payloadHash, sender) {
+  static async processNewPayloadAddedEvent(payloadHash, sender, target) {
     try {
-      await db.set(payloadHash, sender, 600);
+      const storedAuth = {
+        sender: sender,
+        target: target,
+        isVerified: false,
+        isRevoked: false
+      }
+      await db.set(payloadHash, storedAuth);
+
     } catch (err) {
-      throw new Error('Error when processing stored payload');
+      throw new Error('error when processing NewPayloadAdded event!');
     }
   }
 
-  static async processVerifiedPayload(payloadHash, gateway, device) {
+  static async processDeviceVerifiedEvent(payloadHash) {
     try {
-      await db.del(payloadHash);
-      // store list of verified device in a persistent database?
+      let storedAuth = await db.get(payloadHash);
+      if (storedAuth == undefined) throw new Error('payload not found!');
+      else {
+        storedAuth.isVerified = true;
+        await db.replace(payloadHash, storedAuth);
+      }
+
     } catch (err) {
-      return new Error('Error when processing verified payload');
+      return new Error('error when processing DeviceVerified event!');
     }
   }
 
@@ -35,27 +47,37 @@ class Processor {
     const payload = payloadForVendor.payload;
     const payloadSignature = payloadForVendor.payloadSignature;
 
-    const payloadHash = payload.authHash;
-    const auth = payload.auth;
     const authOption = payload.authOption;
-    const vendorId = payload.vendorId;
-    const deviceId = payload.deviceId;
+    const auth = payload.auth;
+    const signature = payload.signature;
 
-    const sender = await db.get(payloadHash);
-    if (sender == undefined) return res.status(404).send('payload not found!');
+    let payloadHash;
+    if (
+      authOption == DEVICE_AUTHN_OPTION.PKSIG ||
+      authOption == DEVICE_AUTHN_OPTION.HMAC
+    ) payloadHash = CryptoUtil.hashPayload(auth.auth);
+    else payloadHash = CryptoUtil.hashPayload(auth);
 
-    const isValid = CryptoUtil.verifyPayload(payloadSignature, payload, sender);
-    if (!isValid) return res.status(401).send('invalid signature!');
+    const storedAuth = await db.get(payloadHash);
+    if (storedAuth == undefined) return res.status(404).send('payload not found!');
 
-    if (vendorId != device.vendorId) return res.status(401).send('invalid vendor id!');
-    if (deviceId != device.address) return res.status(401).send('invalid device id!');
+    const sender = storedAuth.sender;
+    const target = storedAuth.target;
+    const isVerified = storedAuth.isVerified;
+    if (isVerified) return res.status(401).send('replay? we already process this before!');
 
-    const isPayloadValid = await Processor.verifyAuthPayload(authOption, payloadHash, auth, vendor, device);
+    const isOurDevice = CryptoUtil.verifyPayload(signature, target, vendor.address);
+    if (!isOurDevice) return res.status(401).send('invalid signature: not our device!');
+
+    const isValidGateway = CryptoUtil.verifyPayload(payloadSignature, payload, sender);
+    if (!isValidGateway) return res.status(401).send('invalid signature: gateway address is not the same with the one in the blockchain!');
+
+    const isPayloadValid = Processor.verifyDeviceAuthPayload(authOption, auth, target, device);
     if (!isPayloadValid) return res.status(401).send('invalid device authentication payload!');
 
     try {
       const txNonce = await db.get('txNonce');
-      contract.validateAuthPayload(payloadHash, vendor, txNonce);
+      contract.verifyAuthNDevice(payloadHash, vendor, txNonce);
       await db.incr('txNonce', 1);
 
       res.status(200).send('authentication attempt successful!');
@@ -66,48 +88,42 @@ class Processor {
     }
   }
 
-  static async verifyAuthPayload(authOption, payloadHash, receivedAuth, vendor, device) {
+  static verifyDeviceAuthPayload(authOption, receivedAuth, target, device) {
     switch (authOption) {
-      case DEVICE_AUTHN_OPTION.PKE:
-        return await Processor.verifyPublicKeyPayload(payloadHash, receivedAuth, vendor, device);
+      case DEVICE_AUTHN_OPTION.PKSIG:
+        return Processor.verifyPublicKeyPayload(receivedAuth, target, device);
 
-      case DEVICE_AUTHN_OPTION.SKE:
-        return Processor.verifySecretKeyPayload(payloadHash, receivedAuth, device);
+      case DEVICE_AUTHN_OPTION.HMAC:
+        return Processor.verifySecretKeyPayload(receivedAuth, device);
 
       case DEVICE_AUTHN_OPTION.FINGERPRINT:
-        return Processor.verifyFingerprintPayload(payloadHash, receivedAuth, device);
+        return Processor.verifyFingerprintPayload(receivedAuth, device);
 
       case DEVICE_AUTHN_OPTION.MAC:
-        return Processor.verifyMacAddressPayload(payloadHash, receivedAuth, device);
+        return Processor.verifyMacAddressPayload(receivedAuth, device);
     }
   }
 
-  static async verifyPublicKeyPayload(payloadHash, receivedAuth, vendor, device) {
-    const decrypted = await CryptoUtil.decryptPayload(vendor.privateKey, receivedAuth);
-    const auth = decrypted.auth;
-    const authSignature = decrypted.authSignature;
-
-    const hash = CryptoUtil.hashPayload(auth);
-    if (payloadHash != hash) return false;
-
-    const isValid = CryptoUtil.verifyPayload(authSignature, auth, device.address);
+  static async verifyPublicKeyPayload(receivedAuth, target, device) {
+    const auth = receivedAuth.auth;
+    const authSignature = receivedAuth.authSignature;
+    const isValid = CryptoUtil.verifyPayload(authSignature, auth, target);
     if (!isValid) return false;
 
     return (auth.serialNumber == device.serialNumber);
   }
 
-  static verifySecretKeyPayload(payloadHash, receivedAuth, device) {
-    const auth = CryptoUtil.decryptSymmetrically(device.secretKey, receivedAuth);
-    const hash = CryptoUtil.hashPayload(auth);
-    if (payloadHash != hash) return false;
+  static verifySecretKeyPayload(receivedAuth, device) {
+    const auth = receivedAuth.auth;
+    const authSignature = receivedAuth.authSignature;
+    const isValid = CryptoUtil.verifyDigest(device.secretKey, authSignature, auth);
+    if (!isValid) return false;
 
     return (auth.serialNumber == device.serialNumber);
   }
 
-  static verifyFingerprintPayload(payloadHash, receivedAuth, device) {
+  static verifyFingerprintPayload(receivedAuth, device) {
     const auth = receivedAuth;
-    const hash = CryptoUtil.hashPayload(auth);
-    if (payloadHash != hash) return false;
 
     return (
       auth.fingerprint == CryptoUtil.hashPayload(device.fingerprint) &&
@@ -115,10 +131,8 @@ class Processor {
     );
   }
 
-  static verifyMacAddressPayload(payloadHash, receivedAuth, device) {
+  static verifyMacAddressPayload(receivedAuth, device) {
     const auth = receivedAuth;
-    const hash = CryptoUtil.hashPayload(auth);
-    if (payloadHash != hash) return false;
 
     return (
       auth.mac == device.mac &&

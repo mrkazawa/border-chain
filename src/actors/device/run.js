@@ -8,7 +8,7 @@ async function main(option) {
   const device = await Messenger.getDeviceInfo();
   if (!device) throw new Error('cannot get device properties');
 
-  const [authHash, auth] = await Processor.preparePayload(option, device);
+  const [authHash, auth] = Processor.preparePayload(option, device);
   Processor.sendAuthPayloadToGateway(authHash, auth, option, device);
 }
 

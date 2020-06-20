@@ -25,7 +25,7 @@ class Contract {
     this.contract = EthereumUtil.constructSmartContract(abi.abi, this.contractAddress);
   }
 
-  addStoredPayloadEventListener(isp) {
+  addNewPayloadAddedEventListener(isp) {
     this.contract.events.NewPayloadAdded({
       fromBlock: 0
     }, async function (error, event) {
@@ -61,7 +61,7 @@ class Contract {
     });
   }
 
-  async verifyAuthPayload(payloadHash, routerIP, isp, txNonce) {
+  async verifyAuthNGateway(payloadHash, routerIP, isp, txNonce) {
     const routerIPInBytes = EthereumUtil.convertStringToByte(routerIP);
     const verifyAuth = this.contract.methods.verifyAuthNGateway(payloadHash, routerIPInBytes).encodeABI();
     const verifyAuthTx = {

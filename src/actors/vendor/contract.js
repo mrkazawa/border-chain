@@ -25,7 +25,7 @@ class Contract {
     this.contract = EthereumUtil.constructSmartContract(abi.abi, this.contractAddress);
   }
 
-  addStoredPayloadEventListener(vendor) {
+  addNewPayloadAddedEventListener(vendor) {
     this.contract.events.NewPayloadAdded({
       fromBlock: 0
     }, async function (error, event) {
@@ -33,12 +33,13 @@ class Contract {
   
       const sender = event.returnValues['sender'];
       const payloadHash = event.returnValues['payloadHash'];
+      const target = event.returnValues['target'];
       const verifier = event.returnValues['verifier'];
   
       if (verifier == vendor.address) {
         log(chalk.yellow(`Receiving ${payloadHash} payload`));
 
-        Processor.processStoredPayload(payloadHash, sender);
+        Processor.processNewPayloadAddedEvent(payloadHash, sender, target);
       }
     });
   }
@@ -51,18 +52,16 @@ class Contract {
 
       const sender = event.returnValues['sender'];
       const payloadHash = event.returnValues['payloadHash'];
-      const gateway = event.returnValues['gateway'];
-      const device = event.returnValues['device'];
 
       if (sender == vendor.address) {
         log(chalk.yellow(`Verified payload ${payloadHash}`));
 
-        Processor.processVerifiedPayload(payloadHash, gateway, device);
+        Processor.processDeviceVerifiedEvent(payloadHash);
       }
     });
   }
 
-  async validateAuthPayload(authHash, vendor, txNonce) {
+  async verifyAuthNDevice(authHash, vendor, txNonce) {
     const validateAuth = this.contract.methods.verifyAuthNDevice(authHash).encodeABI();
     const validateAuthTx = {
       from: vendor.address,
