@@ -27,14 +27,12 @@ async function main() {
 
 async function prepare() {
   try {
-    const [assigned, registered, abi] = await Promise.all([
+    const [assigned, abi] = await Promise.all([
       Messenger.seedEtherToOwner(OWNER.address),
-      Messenger.registerGatewayToAdmin(GATEWAY.address, GATEWAY.publicKey, GATEWAY.privateKey),
       Messenger.getContractAbi()
     ]);
 
     log(chalk.yellow(assigned));
-    log(chalk.yellow(registered));
 
     const user = createUserCredential();
     const ispInfo = await Messenger.sendUserRegistrationToIsp(OWNER.address, user.username, user.password);

@@ -13,7 +13,7 @@ async function main(option) {
 }
 
 if (process.argv.length !== 3) {
-  log(chalk.red('You have to put only one argument in integer: the DEVICE_AUTHN_OPTION!'));
+  log(chalk.red('You have to put only one argument in integer: 1 for pksig, 2 for sksig, 3 for fingerprint, and 4 for mac'));
   process.exit(1);
 
 } else {

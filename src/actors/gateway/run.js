@@ -34,7 +34,8 @@ async function runMaster() {
       cluster.fork();
     });
 
-    const [contract, gateway] = await prepare();
+    const [abi, gateway] = await prepare();
+    const contract = new Contract(abi);
     contract.addNewPayloadAddedEventListener(gateway);
   }
 }
@@ -57,8 +58,7 @@ async function prepare() {
       db.set('txNonce', currentTxNonce)
     ]);
 
-    const contract = new Contract(abi);
-    return [contract, gateway];
+    return [abi, gateway];
 
   } catch (err) {
     throw new Error('error when preparing!');

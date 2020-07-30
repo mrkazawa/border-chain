@@ -27,16 +27,19 @@ class Processor {
     }
   }
 
-  static async processGatewayVerifiedEvent(gatewayAddres, payloadHash) {
+  static async processGatewayVerifiedEvent(payloadHash, gateway) {
     try {
       // store list of approved gateway address in the database
       // this is useful for revocation use case
       const storedAuth = {
-        gateway: gatewayAddres,
+        gateway: gateway.address,
         isVerified: true,
         isRevoked: false
       }
       await db.set(payloadHash, storedAuth);
+
+      const registered = await Messenger.registerGatewayToAdmin(gateway.address, gateway.publicKey, gateway.privateKey);
+      log(chalk.yellow(registered));
 
     } catch (err) {
       return new Error('error when processing GatewayVerified event!');

@@ -17,7 +17,6 @@ const DEVICE_AUTHN_OPTION = {
 
 // mock device properties
 const DEVICE_PROPERTIES = {
-  serialNumber: '1234-5678-1234-5678',
   secretKey: 'secret',
   fingerprint: 'cf23df2207d99a74fbe169e3eba035e633b65d94',
   mac: '00-14-22-01-23-45'

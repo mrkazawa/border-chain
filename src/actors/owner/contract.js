@@ -51,7 +51,7 @@ class Contract {
       if (gateway == ourGateway.address) {
         log(chalk.yellow(`Contract event: ISP ${sender} has verified payload ${payloadHash} for our gateway ${gateway}`));
 
-        Processor.processGatewayVerifiedEvent(payloadHash, gateway);
+        Processor.processGatewayVerifiedEvent(payloadHash, ourGateway);
       }
     });
   }

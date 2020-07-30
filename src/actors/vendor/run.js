@@ -39,7 +39,8 @@ async function runMaster() {
       cluster.fork();
     });
 
-    const [contract, vendor] = await prepare();
+    const [abi, vendor] = await prepare();
+    const contract = new Contract(abi);
     contract.addNewPayloadAddedEventListener(vendor);
     contract.addDeviceVerifiedEventListener(vendor);
   }
@@ -49,6 +50,7 @@ async function prepare() {
   try {
     const vendor = CryptoUtil.createNewIdentity();
     const device = CryptoUtil.createNewIdentity();
+
     const signature = CryptoUtil.signPayload(vendor.privateKey, device.address);
     const deviceProperties = appendToDeviceProperties(DEVICE_PROPERTIES, signature, device, vendor);
 
@@ -72,8 +74,7 @@ async function prepare() {
       db.set('txNonce', currentTxNonce)
     ]);
 
-    const contract = new Contract(abi);
-    return [contract, vendor];
+    return [abi, vendor];
 
   } catch (err) {
     throw new Error('error when preparing!');

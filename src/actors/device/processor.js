@@ -33,7 +33,6 @@ class Processor {
 
   static constructPublicKeyPayload(device) {
     const auth = {
-      serialNumber: device.serialNumber,
       timestamp: Date.now(),
       nonce: CryptoUtil.randomValueBase64(64)
     };
@@ -50,7 +49,6 @@ class Processor {
   
   static constructSecretKeyPayload(device) {
     const auth = {
-      serialNumber: device.serialNumber,
       timestamp: Date.now(),
       nonce: CryptoUtil.randomValueBase64(64)
     };
@@ -67,7 +65,6 @@ class Processor {
   
   static constructFingerprintPayload(device) {
     const auth = {
-      serialNumber: device.serialNumber,
       fingerprint: CryptoUtil.hashPayload(device.fingerprint),
       timestamp: Date.now(),
       nonce: CryptoUtil.randomValueBase64(64)
@@ -79,7 +76,6 @@ class Processor {
   
   static constructMacPayload(device) {
     const auth = {
-      serialNumber: device.serialNumber,
       mac: device.mac,
       timestamp: Date.now(),
       nonce: CryptoUtil.randomValueBase64(64)
