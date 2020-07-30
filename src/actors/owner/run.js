@@ -10,7 +10,7 @@ const OWNER = CryptoUtil.createNewIdentity();
 const GATEWAY = CryptoUtil.createNewIdentity();
 
 async function main() {
-  const [contract, user, ispInfo] = await prepare();
+  const [abi, user, ispInfo] = await prepare();
   const auth = createAuthenticationPayload(user, ispInfo.routerIP);
   const authHash = CryptoUtil.hashPayload(auth);
 
@@ -19,6 +19,7 @@ async function main() {
     publicKey: ispInfo.publicKey
   }
 
+  const contract = new Contract(abi);
   contract.addNewPayloadAddedEventListener(OWNER, auth, isp);
   contract.addGatewayVerifiedEventListener(GATEWAY);
   contract.storeAuthNPayload(authHash, GATEWAY.address, isp.address, OWNER);
@@ -35,16 +36,14 @@ async function prepare() {
     log(chalk.yellow(assigned));
     log(chalk.yellow(registered));
 
-    const contract = new Contract(abi);
     const user = createUserCredential();
     const ispInfo = await Messenger.sendUserRegistrationToIsp(OWNER.address, user.username, user.password);
 
-    return [contract, user, ispInfo];
+    return [abi, user, ispInfo];
 
   } catch (err) {
     throw new Error('error when preparing!');
   }
-
 }
 
 function createUserCredential() {

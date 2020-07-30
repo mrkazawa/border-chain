@@ -1,6 +1,7 @@
 const web3 = require('./web3');
 
 // an ethereum address with many Ether to be leeched.
+// 1st address from ganache with mnemonic "dongseo"
 const POOL_SOURCE = '0xaE7DE0a0E7dD1a63C916fFd229F2501292B79643';
 
 class EthereumUtil {

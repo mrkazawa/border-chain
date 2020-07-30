@@ -9,6 +9,7 @@ contract RegistryContract {
         address verifier; // the verifier of the target
         bool isValue; // true when payload is stored
         bool isVerified; // true when it has been verified by verifier
+        bool isRevoked; // true when it has been revoked by the original proposer
     }
 
     address public owner;
@@ -96,7 +97,6 @@ contract RegistryContract {
         p.target = target;
         p.verifier = verifier;
         p.isValue = true;
-        p.isVerified = false;
 
         emit NewPayloadAdded(msg.sender, payloadHash, target, verifier);
     }

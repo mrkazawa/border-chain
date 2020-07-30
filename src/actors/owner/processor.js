@@ -20,7 +20,7 @@ class Processor {
     try {
       const exist = await db.get(payloadHash);
       if (!exist || !exist.isVerified) await Processor.prepareAndSendToISP(owner, auth, isp);
-      else log(chalk.yellow(`we already process ${payloadHash} before`));
+      else log(chalk.yellow(`do nothing, we has already processed ${payloadHash} before`));
 
     } catch (err) {
       return new Error('error when processing NewPayloadAdded event!');

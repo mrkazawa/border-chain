@@ -58,8 +58,9 @@ class Processor {
       }
 
       return res.status(200).send(payloadForOwner);
+
     } catch (err) {
-      log(`internal error: ${err}`);
+      log(chalk.redBright(`internal error: ${err}`));
       return res.status(500).send(`internal error: ${err}`);
     }
   }
@@ -75,9 +76,11 @@ class Processor {
     const payloadHash = CryptoUtil.hashPayload(payload);
 
     const storedAuth = await db.get(payloadHash);
+    if (storedAuth == undefined) return res.status(404).send('payload not found!');
+
     const sender = storedAuth.sender;
     const isVerified = storedAuth.isVerified;
-    if (sender == undefined) return res.status(404).send('payload not found!');
+    
     if (isVerified) return res.status(401).send('replay? we already process this before!');
 
     const isValid = CryptoUtil.verifyPayload(payloadSignature, payload, sender);
@@ -99,7 +102,7 @@ class Processor {
       return res.status(200).send('authentication attempt successful!');
 
     } catch (err) {
-      log(chalk.red(`internal error: ${err}`));
+      log(chalk.redBright(`internal error: ${err}`));
       return res.status(500).send(`internal error: ${err}`);
     }
   }

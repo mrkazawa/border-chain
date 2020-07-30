@@ -31,7 +31,7 @@ class Contract {
       const payloadHash = event.returnValues['payloadHash'];
 
       if (sender == owner.address) {
-        log(chalk.yellow(`Owner ${sender} has stored payload ${payloadHash}`));
+        log(chalk.yellow(`Contract event: ${sender} has stored payload ${payloadHash}`));
 
         Processor.processNewPayloadAddedEvent(payloadHash, owner, auth, isp);
       }
@@ -49,7 +49,7 @@ class Contract {
       const gateway = event.returnValues['gateway'];
 
       if (gateway == ourGateway.address) {
-        log(chalk.yellow(`ISP ${sender} has verified payload ${payloadHash} for our gateway ${gateway}`));
+        log(chalk.yellow(`Contract event: ISP ${sender} has verified payload ${payloadHash} for our gateway ${gateway}`));
 
         Processor.processGatewayVerifiedEvent(payloadHash, gateway);
       }
