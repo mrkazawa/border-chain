@@ -36,7 +36,7 @@ class Contract {
       const verifier = event.returnValues['verifier'];
   
       if (verifier == isp.address) {
-        log(chalk.yellow(`Contract event: receiving ${payloadHash} payload from ${sender}`));
+        log(chalk.yellow(`Contract event: ${payloadHash} payload is stored`));
         
         Processor.processNewPayloadAddedEvent(payloadHash, sender);
       }

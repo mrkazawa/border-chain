@@ -41,9 +41,10 @@ class Processor {
 
   static async processDeviceAuthentication(req, res, contract, vendor, device) {
     if (req.body.constructor === Object && Object.keys(req.body).length === 0) return res.status(401).send('your request does not have a body!');
-    const offChainPayload = req.body.payload;
 
+    const offChainPayload = req.body.payload;
     const payloadForVendor = await CryptoUtil.decryptPayload(vendor.privateKey, offChainPayload);
+
     const payload = payloadForVendor.payload;
     const payloadSignature = payloadForVendor.payloadSignature;
 
@@ -91,7 +92,7 @@ class Processor {
   static verifyDeviceAuthPayload(authOption, receivedAuth, target, device) {
     switch (authOption) {
       case DEVICE_AUTHN_OPTION.PKSIG:
-        return Processor.verifyPublicKeyPayload(receivedAuth, target, device);
+        return Processor.verifyPublicKeyPayload(receivedAuth, target);
 
       case DEVICE_AUTHN_OPTION.HMAC:
         return Processor.verifySecretKeyPayload(receivedAuth, device);
@@ -104,40 +105,30 @@ class Processor {
     }
   }
 
-  static async verifyPublicKeyPayload(receivedAuth, target, device) {
+  static async verifyPublicKeyPayload(receivedAuth, target) {
     const auth = receivedAuth.auth;
     const authSignature = receivedAuth.authSignature;
-    const isValid = CryptoUtil.verifyPayload(authSignature, auth, target);
-    if (!isValid) return false;
 
-    return (auth.serialNumber == device.serialNumber);
+    return CryptoUtil.verifyPayload(authSignature, auth, target);
   }
 
   static verifySecretKeyPayload(receivedAuth, device) {
     const auth = receivedAuth.auth;
     const authSignature = receivedAuth.authSignature;
-    const isValid = CryptoUtil.verifyDigest(device.secretKey, authSignature, auth);
-    if (!isValid) return false;
 
-    return (auth.serialNumber == device.serialNumber);
+    return CryptoUtil.verifyDigest(device.secretKey, authSignature, auth);
   }
 
   static verifyFingerprintPayload(receivedAuth, device) {
     const auth = receivedAuth;
 
-    return (
-      auth.fingerprint == CryptoUtil.hashPayload(device.fingerprint) &&
-      auth.serialNumber == device.serialNumber
-    );
+    return (auth.fingerprint == CryptoUtil.hashPayload(device.fingerprint));
   }
 
   static verifyMacAddressPayload(receivedAuth, device) {
     const auth = receivedAuth;
 
-    return (
-      auth.mac == device.mac &&
-      auth.serialNumber == device.serialNumber
-    );
+    return (auth.mac == device.mac);
   }
 }
 

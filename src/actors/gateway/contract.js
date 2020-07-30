@@ -35,7 +35,7 @@ class Contract {
       const payloadHash = event.returnValues['payloadHash'];
 
       if (sender == gateway.address) {
-        log(chalk.yellow(`Receiving ${payloadHash} payload`));
+        log(chalk.yellow(`Contract event: ${payloadHash} payload is stored`));
 
         Processor.processNewPayloadAddedEvent(payloadHash, gateway);
       }

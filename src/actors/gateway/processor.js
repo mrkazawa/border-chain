@@ -21,8 +21,8 @@ const {
 class Processor {
   static async processNewPayloadAddedEvent(payloadHash, gateway) {
     const storedPayload = await db.get(payloadHash);
-    if (!storedPayload) log(chalk.red(`${payloadHash} not found`));
-    else if (storedPayload.isVerified) log(chalk.red(`${payloadHash} already verified`));
+    if (!storedPayload) log(chalk.red(`do nothing, ${payloadHash} not found`));
+    else if (storedPayload.isVerified) log(chalk.red(`do nothing, ${payloadHash} already verified`));
     else Processor.prepareAndSendToVendor(gateway, storedPayload);
   }
 
@@ -64,8 +64,8 @@ class Processor {
 
   static async processDeviceAuthentication(req, res, contract, gateway) {
     if (req.body.constructor === Object && Object.keys(req.body).length === 0) return res.status(401).send('missing body!');
-    const payload = req.body.payload;
 
+    const payload = req.body.payload;
     const payloadHash = payload.authHash;
     const auth = payload.auth;
     const authOption = payload.authOption;

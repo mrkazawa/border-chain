@@ -37,7 +37,7 @@ class Contract {
       const verifier = event.returnValues['verifier'];
   
       if (verifier == vendor.address) {
-        log(chalk.yellow(`Receiving ${payloadHash} payload`));
+        log(chalk.yellow(`Contract event: ${payloadHash} payload is stored`));
 
         Processor.processNewPayloadAddedEvent(payloadHash, sender, target);
       }
@@ -54,7 +54,7 @@ class Contract {
       const payloadHash = event.returnValues['payloadHash'];
 
       if (sender == vendor.address) {
-        log(chalk.yellow(`Verified payload ${payloadHash}`));
+        log(chalk.yellow(`Contract event: ${payloadHash} payload is verified`));
 
         Processor.processDeviceVerifiedEvent(payloadHash);
       }
