@@ -13,12 +13,12 @@ contract RegistryContract {
     }
 
     address public owner;
-    // key: payloadHash, value: AuthenticationPayload struct
-    mapping(bytes32 => AuthenticationPayload) public payloads;
-    // key: gateway address, value: reachable IP if trusted (not trusted will be 0x0)
-    mapping(address => bytes32) trustedGateways;
-    // key: device address, value: current gateway address
-    mapping(address => address) trustedDevices;
+
+    mapping(bytes32 => AuthenticationPayload) public payloads; // key: payloadHash, value: AuthenticationPayload struct
+    mapping(address => bytes32) trustedGateways; // key: gateway address, value: reachable IP if trusted (not trusted will be 0x0)
+    mapping(address => address) trustedDevices; // key: device address, value: current gateway address
+
+    //----------------------------- Events -----------------------------//
 
     event NewPayloadAdded(
         address sender,
@@ -35,6 +35,8 @@ contract RegistryContract {
     );
     event GatewayRevoked(address sender, address gateway);
     event DeviceRevoked(address sender, address device);
+
+    //----------------------------- Modifiers -----------------------------//
 
     modifier payloadMustExist(bytes32 payloadHash) {
         require(payloads[payloadHash].isValue, "payload must exist");
@@ -82,6 +84,8 @@ contract RegistryContract {
         );
         _;
     }
+
+    //----------------------------- Methods -----------------------------//
 
     constructor() public {
         owner = msg.sender;
@@ -164,26 +168,6 @@ contract RegistryContract {
 
     function isTrustedDevice(address device) public view returns (bool) {
         return (trustedGateways[trustedDevices[device]] != 0);
-    }
-
-    function getPayloadDetail(bytes32 payloadHash)
-        public
-        view
-        returns (
-            address,
-            address,
-            address,
-            bool,
-            bool
-        )
-    {
-        return (
-            payloads[payloadHash].source,
-            payloads[payloadHash].target,
-            payloads[payloadHash].verifier,
-            payloads[payloadHash].isValue,
-            payloads[payloadHash].isVerified
-        );
     }
 
     function getGatewayIP(address gateway) public view returns (bytes32) {

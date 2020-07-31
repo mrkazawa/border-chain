@@ -82,8 +82,7 @@ contract('Revoking Gateway Test', (accounts) => {
       gateway: gatewayAddress
     });
 
-    // when we delete the trusted gateway, any associated device connected to the gateway
-    // should also be deleted, thereby not trusted
+    // when we delete the trusted gateway, any associated device connected to the gateway should also be deleted, thereby not trusted
     status = await RC.isTrustedGateway(gatewayAddress, {
       from: observerAddress
     });
