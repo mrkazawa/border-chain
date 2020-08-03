@@ -2,39 +2,43 @@
 pragma solidity >=0.5.1;
 
 contract RegistryContract {
-    // TODO: add isRevoked, and add test case also
-    struct AuthenticationPayload {
-        address source; // the sender of the authentication payload
-        address target; // the authentication target
-        address verifier; // the verifier of the target
+    //----------------------------- Variables -----------------------------//
+
+    struct Payload {
+        address source; // the sender of this payload
+        address target; // the target of this payload
+        address approver; // the approver of this payload
         bool isValue; // true when payload is stored
-        bool isVerified; // true when it has been verified by verifier
-        bool isRevoked; // true when it has been revoked by the original proposer
+        bool isApproved; // true when it has been approved
+        bool isRevoked; // true when it has been revoked
+        uint256 expiryTime; // estimation on the expiry time using block.timestmap
     }
 
     address public owner;
 
-    mapping(bytes32 => AuthenticationPayload) public payloads; // key: payloadHash, value: AuthenticationPayload struct
+    mapping(bytes32 => Payload) public payloads; // key: payloadHash, value: Payload struct
     mapping(address => bytes32) trustedGateways; // key: gateway address, value: reachable IP if trusted (not trusted will be 0x0)
     mapping(address => address) trustedDevices; // key: device address, value: current gateway address
 
     //----------------------------- Events -----------------------------//
 
-    event NewPayloadAdded(
-        address sender,
+    event PayloadAdded(
         bytes32 payloadHash,
+        address sender,
         address target,
-        address verifier
+        address approver
     );
-    event GatewayVerified(address sender, bytes32 payloadHash, address gateway);
-    event DeviceVerified(
-        address sender,
+    event GatewayApproved(bytes32 payloadHash, address sender, address gateway);
+    event DeviceApproved(
         bytes32 payloadHash,
+        address sender,
         address gateway,
         address device
     );
-    event GatewayRevoked(address sender, address gateway);
-    event DeviceRevoked(address sender, address device);
+    event AccessApproved(bytes32 payloadHash, address sender, address target, uint expiryTime);
+    event GatewayRevoked(bytes32 payloadHash, address sender, address gateway);
+    event DeviceRevoked(bytes32 payloadHash, address sender, address device);
+    event AccessRevoked(bytes32 payloadHash, address sender, address target);
 
     //----------------------------- Modifiers -----------------------------//
 
@@ -48,18 +52,39 @@ contract RegistryContract {
         _;
     }
 
-    modifier payloadMustNotVerified(bytes32 payloadHash) {
+    modifier payloadMustBeApproved(bytes32 payloadHash) {
+        require(payloads[payloadHash].isApproved, "payload must be approved");
+        _;
+    }
+
+    modifier payloadMustBeNotApproved(bytes32 payloadHash) {
         require(
-            !payloads[payloadHash].isVerified,
-            "payload must be not verified"
+            !payloads[payloadHash].isApproved,
+            "payload must be not approved"
         );
         _;
     }
 
-    modifier onlyForVerifier(bytes32 payloadHash) {
+    modifier payloadMustBeNotRevoked(bytes32 payloadHash) {
         require(
-            payloads[payloadHash].verifier == msg.sender,
-            "only for valid verifier"
+            !payloads[payloadHash].isRevoked,
+            "payload must be not revoked"
+        );
+        _;
+    }
+
+    modifier payloadIsForValidTarget(bytes32 payloadHash, address target) {
+        require(
+            payloads[payloadHash].target == target,
+            "payload must contain a valid target"
+        );
+        _;
+    }
+
+    modifier onlyForApprover(bytes32 payloadHash) {
+        require(
+            payloads[payloadHash].approver == msg.sender,
+            "only for original approver"
         );
         _;
     }
@@ -72,16 +97,16 @@ contract RegistryContract {
         _;
     }
 
-    modifier gatewayMustTrusted(address gateway) {
-        require(trustedGateways[gateway] != 0, "gateway must be trusted");
+    modifier onlyForSourceOrApprover(bytes32 payloadHash) {
+        require(
+            payloads[payloadHash].source == msg.sender || payloads[payloadHash].approver == msg.sender,
+            "only for original source or approver"
+        );
         _;
     }
 
-    modifier deviceMustTrusted(address device) {
-        require(
-            trustedGateways[trustedDevices[device]] != 0,
-            "device must be trusted"
-        );
+    modifier gatewayMustBeTrusted(address gateway) {
+        require(trustedGateways[gateway] != 0, "gateway must be trusted");
         _;
     }
 
@@ -91,75 +116,111 @@ contract RegistryContract {
         owner = msg.sender;
     }
 
-    function storeAuthNPayload(
+    function storePayload(
         bytes32 payloadHash,
         address target,
-        address verifier
+        address approver
     ) public payloadMustNotExist(payloadHash) {
-        AuthenticationPayload storage p = payloads[payloadHash];
+        Payload storage p = payloads[payloadHash];
         p.source = msg.sender;
         p.target = target;
-        p.verifier = verifier;
+        p.approver = approver;
         p.isValue = true;
 
-        emit NewPayloadAdded(msg.sender, payloadHash, target, verifier);
+        emit PayloadAdded(payloadHash, msg.sender, target, approver);
     }
 
-    function verifyAuthNGateway(bytes32 payloadHash, bytes32 routerIP)
+    function approveGateway(bytes32 payloadHash, bytes32 routerIp)
         public
         payloadMustExist(payloadHash)
-        payloadMustNotVerified(payloadHash)
-        onlyForVerifier(payloadHash)
+        payloadMustBeNotApproved(payloadHash)
+        onlyForApprover(payloadHash)
     {
-        trustedGateways[payloads[payloadHash].target] = routerIP;
-        payloads[payloadHash].isVerified = true;
+        trustedGateways[payloads[payloadHash].target] = routerIp;
+        payloads[payloadHash].isApproved = true;
 
-        emit GatewayVerified(
-            msg.sender,
+        emit GatewayApproved(
             payloadHash,
+            msg.sender,
             payloads[payloadHash].target
         );
     }
 
-    function verifyAuthNDevice(bytes32 payloadHash)
+    function approveDevice(bytes32 payloadHash)
         public
         payloadMustExist(payloadHash)
-        payloadMustNotVerified(payloadHash)
-        onlyForVerifier(payloadHash)
-        gatewayMustTrusted(payloads[payloadHash].source)
+        payloadMustBeNotApproved(payloadHash)
+        onlyForApprover(payloadHash)
+        gatewayMustBeTrusted(payloads[payloadHash].source)
     {
         trustedDevices[payloads[payloadHash].target] = payloads[payloadHash]
             .source;
-        payloads[payloadHash].isVerified = true;
+        payloads[payloadHash].isApproved = true;
 
-        emit DeviceVerified(
-            msg.sender,
+        emit DeviceApproved(
             payloadHash,
+            msg.sender,
             payloads[payloadHash].source,
             payloads[payloadHash].target
         );
     }
 
-    function deleteTrustedGateway(bytes32 payloadHash, address gateway)
+    function approveAccess(bytes32 payloadHash, uint256 expiredIn)
         public
         payloadMustExist(payloadHash)
-        onlyForSource(payloadHash)
-        gatewayMustTrusted(gateway)
+        payloadMustBeNotApproved(payloadHash)
+        onlyForApprover(payloadHash)
+        gatewayMustBeTrusted(payloads[payloadHash].approver)
     {
-        trustedGateways[gateway] = 0;
+        payloads[payloadHash].expiryTime = block.timestamp + expiredIn;
+        payloads[payloadHash].isApproved = true;
 
-        emit GatewayRevoked(msg.sender, gateway);
+        emit AccessApproved(
+            payloadHash,
+            msg.sender,
+            payloads[payloadHash].source,
+            payloads[payloadHash].expiryTime
+        );
     }
 
-    function deleteTrustedDevice(bytes32 payloadHash, address device)
+    function revokeGateway(bytes32 payloadHash, address gateway)
         public
         payloadMustExist(payloadHash)
+        payloadMustBeApproved(payloadHash)
+        payloadMustBeNotRevoked(payloadHash)
         onlyForSource(payloadHash)
-        deviceMustTrusted(device)
+        payloadIsForValidTarget(payloadHash, gateway)
+    {
+        trustedGateways[gateway] = 0;
+        payloads[payloadHash].isRevoked = true;
+
+        emit GatewayRevoked(payloadHash, msg.sender, gateway);
+    }
+
+    function revokeDevice(bytes32 payloadHash, address device)
+        public
+        payloadMustExist(payloadHash)
+        payloadMustBeApproved(payloadHash)
+        payloadMustBeNotRevoked(payloadHash)
+        onlyForSource(payloadHash)
+        payloadIsForValidTarget(payloadHash, device)
     {
         trustedDevices[device] = address(0);
+        payloads[payloadHash].isRevoked = true;
 
-        emit DeviceRevoked(msg.sender, device);
+        emit DeviceRevoked(payloadHash, msg.sender, device);
+    }
+
+    function revokeAccess(bytes32 payloadHash)
+        public
+        payloadMustExist(payloadHash)
+        payloadMustBeApproved(payloadHash)
+        payloadMustBeNotRevoked(payloadHash)
+        onlyForSourceOrApprover(payloadHash)
+    {
+        payloads[payloadHash].isRevoked = true;
+
+        emit AccessRevoked(payloadHash, msg.sender, payloads[payloadHash].target);
     }
 
     function isTrustedGateway(address gateway) public view returns (bool) {
@@ -170,7 +231,5 @@ contract RegistryContract {
         return (trustedGateways[trustedDevices[device]] != 0);
     }
 
-    function getGatewayIP(address gateway) public view returns (bytes32) {
-        return trustedGateways[gateway];
-    }
+    //TODO: add check access status
 }
