@@ -52,12 +52,13 @@ module.exports = {
   // Set default mocha options here, use special reporters etc.
   mocha: {
     timeout: 100000,
+    reporter: 'eth-gas-reporter'
   },
 
   // Configure your compilers
   compilers: {
     solc: {
-      version: "0.5.1",
+      version: '0.5.1',
     }
   }
 }
