@@ -75,26 +75,27 @@ class Processor {
     const payloadSignature = payloadForIsp.payloadSignature;
     const payloadHash = CryptoUtil.hashPayload(payload);
 
-    const storedAuth = await db.get(payloadHash);
-    if (storedAuth == undefined) return res.status(404).send('payload not found!');
-
-    const sender = storedAuth.sender;
-    const isApproved = storedAuth.isApproved;
-    
-    if (isApproved) return res.status(401).send('replay? we already process this before!');
-
-    const isValid = CryptoUtil.verifyPayload(payloadSignature, payload, sender);
-    if (!isValid) return res.status(401).send('invalid signature!');
-
-    const user = await db.get(sender);
-    if (user == undefined) return res.status(404).send('user not found!');
-    if (
-      user.username != payload.username ||
-      user.password != payload.password ||
-      user.routerIp != payload.routerIp
-    ) return res.status(401).send('invalid user authentication payload!');
-
     try {
+      const storedAuth = await db.get(payloadHash);
+      if (storedAuth == undefined) return res.status(404).send('payload not found!');
+
+      const sender = storedAuth.sender;
+      const isApproved = storedAuth.isApproved;
+
+      if (isApproved) return res.status(401).send('replay? we already process this before!');
+
+      const isValid = CryptoUtil.verifyPayload(payloadSignature, payload, sender);
+      if (!isValid) return res.status(401).send('invalid signature!');
+
+      const user = await db.get(sender);
+      if (user == undefined) return res.status(404).send('user not found!');
+      if (
+        user.username != payload.username ||
+        user.password != payload.password ||
+        user.routerIp != payload.routerIp
+      ) return res.status(401).send('invalid user authentication payload!');
+
+
       const txNonce = await db.get('txNonce');
       contract.approveGateway(payloadHash, payload.routerIp, isp, txNonce);
       await db.incr('txNonce', 1);

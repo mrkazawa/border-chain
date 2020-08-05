@@ -25,8 +25,8 @@ class Contract {
     this.contract = EthereumUtil.constructSmartContract(abi.abi, this.contractAddress);
   }
 
-  addNewPayloadAddedEventListener(vendor) {
-    this.contract.events.NewPayloadAdded({
+  addPayloadAddedEventListener(vendor) {
+    this.contract.events.PayloadAdded({
       fromBlock: 0
     }, async function (error, event) {
       if (error) log(chalk.red(error));
@@ -34,18 +34,18 @@ class Contract {
       const sender = event.returnValues['sender'];
       const payloadHash = event.returnValues['payloadHash'];
       const target = event.returnValues['target'];
-      const verifier = event.returnValues['verifier'];
+      const approver = event.returnValues['approver'];
   
-      if (verifier == vendor.address) {
+      if (approver == vendor.address) {
         log(chalk.yellow(`Contract event: ${payloadHash} payload is stored`));
 
-        Processor.processNewPayloadAddedEvent(payloadHash, sender, target);
+        Processor.processPayloadAddedEvent(payloadHash, sender, target);
       }
     });
   }
 
-  addDeviceVerifiedEventListener(vendor) {
-    this.contract.events.DeviceVerified({
+  addDeviceApprovedEventListener(vendor) {
+    this.contract.events.DeviceApproved({
       fromBlock: 0
     }, function (error, event) {
       if (error) log(chalk.red(error));
@@ -54,25 +54,25 @@ class Contract {
       const payloadHash = event.returnValues['payloadHash'];
 
       if (sender == vendor.address) {
-        log(chalk.yellow(`Contract event: ${payloadHash} payload is verified`));
+        log(chalk.yellow(`Contract event: ${payloadHash} payload is approved`));
 
-        Processor.processDeviceVerifiedEvent(payloadHash);
+        Processor.processDeviceApprovedEvent(payloadHash);
       }
     });
   }
 
-  async verifyAuthNDevice(authHash, vendor, txNonce) {
-    const validateAuth = this.contract.methods.verifyAuthNDevice(authHash).encodeABI();
-    const validateAuthTx = {
+  async approveDevice(authHash, vendor, txNonce) {
+    const approveAuth = this.contract.methods.approveDevice(authHash).encodeABI();
+    const approveAuthTx = {
       from: vendor.address,
       to: this.contractAddress,
       nonce: txNonce,
       gasLimit: 5000000,
       gasPrice: 5000000000,
-      data: validateAuth
+      data: approveAuth
     };
   
-    const signedTx = CryptoUtil.signTransaction(vendor.privateKey, validateAuthTx);
+    const signedTx = CryptoUtil.signTransaction(vendor.privateKey, approveAuthTx);
     if (!isBenchmarking()) EthereumUtil.sendTransaction(signedTx);
   }
 }

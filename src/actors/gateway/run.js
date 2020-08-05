@@ -14,7 +14,7 @@ const Messenger = require('./messenger');
 const Processor = require('./processor');
 const Contract = require('./contract');
 
-const DB = require('./db');
+const DB = require('./db/db');
 const db = new DB();
 
 async function runMaster() {
@@ -36,7 +36,8 @@ async function runMaster() {
 
     const [abi, gateway] = await prepare();
     const contract = new Contract(abi);
-    contract.addNewPayloadAddedEventListener(gateway);
+    contract.addPayloadAddedEventListener(gateway);
+    contract.addDeviceApprovedEventListener(gateway);
   }
 }
 

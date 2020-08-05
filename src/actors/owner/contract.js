@@ -27,8 +27,8 @@ class Contract {
     }, function (error, event) {
       if (error) log(chalk.red(error));
 
-      const sender = event.returnValues['sender'];
       const payloadHash = event.returnValues['payloadHash'];
+      const sender = event.returnValues['sender'];
 
       if (sender == owner.address) {
         log(chalk.yellow(`Contract event: ${payloadHash} payload is stored`));
@@ -44,7 +44,6 @@ class Contract {
     }, function (error, event) {
       if (error) log(chalk.red(error));
 
-      const sender = event.returnValues['sender'];
       const payloadHash = event.returnValues['payloadHash'];
       const gateway = event.returnValues['gateway'];
 

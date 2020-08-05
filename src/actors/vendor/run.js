@@ -41,8 +41,8 @@ async function runMaster() {
 
     const [abi, vendor] = await prepare();
     const contract = new Contract(abi);
-    contract.addNewPayloadAddedEventListener(vendor);
-    contract.addDeviceVerifiedEventListener(vendor);
+    contract.addPayloadAddedEventListener(vendor);
+    contract.addDeviceApprovedEventListener(vendor);
   }
 }
 

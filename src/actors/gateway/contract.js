@@ -25,25 +25,44 @@ class Contract {
     this.contract = EthereumUtil.constructSmartContract(abi.abi, this.contractAddress);
   }
 
-  addNewPayloadAddedEventListener(gateway) {
-    this.contract.events.NewPayloadAdded({
+  addPayloadAddedEventListener(gateway) {
+    this.contract.events.PayloadAdded({
       fromBlock: 0
     }, async function (error, event) {
       if (error) log(chalk.red(error));
 
-      const sender = event.returnValues['sender'];
       const payloadHash = event.returnValues['payloadHash'];
+      const sender = event.returnValues['sender'];
 
       if (sender == gateway.address) {
         log(chalk.yellow(`Contract event: ${payloadHash} payload is stored`));
 
-        Processor.processNewPayloadAddedEvent(payloadHash, gateway);
+        Processor.processPayloadAddedEvent(payloadHash, gateway);
       }
     });
   }
 
-  storeAuthNPayload(authHash, deviceAddress, vendorAddress, gateway, txNonce) {
-    const storeAuth = this.contract.methods.storeAuthNPayload(authHash, deviceAddress, vendorAddress).encodeABI();
+  addDeviceApprovedEventListener(ourGateway) {
+    this.contract.events.DeviceApproved({
+      fromBlock: 0
+    }, function (error, event) {
+      if (error) log(chalk.red(error));
+
+      const payloadHash = event.returnValues['payloadHash'];
+      const sender = event.returnValues['sender'];
+      const gateway = event.returnValues['gateway'];
+      const device = event.returnValues['device'];
+
+      if (gateway == ourGateway.address) {
+        log(chalk.yellow(`Contract event: ${payloadHash} payload is approved`));
+
+        Processor.processDeviceApprovedEvent(payloadHash, sender, gateway, device);
+      }
+    });
+  }
+
+  storePayload(authHash, deviceAddress, vendorAddress, gateway, txNonce) {
+    const storeAuth = this.contract.methods.storePayload(authHash, deviceAddress, vendorAddress).encodeABI();
     const storeAuthTx = {
       from: gateway.address,
       to: this.contractAddress,

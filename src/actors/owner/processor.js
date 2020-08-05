@@ -18,8 +18,8 @@ const {
 class Processor {
   static async processPayloadAddedEvent(payloadHash, owner, auth, isp) {
     try {
-      const exist = await db.get(payloadHash);
-      if (!exist || !exist.isApproved) await Processor.prepareAndSendToIsp(owner, auth, isp);
+      const storedAuth = await db.get(payloadHash);
+      if (!storedAuth || !storedAuth.isApproved) await Processor.prepareAndSendToIsp(owner, auth, isp);
       else log(chalk.yellow(`do nothing, we has already processed ${payloadHash} before`));
 
     } catch (err) {

@@ -10,22 +10,22 @@ const {
 } = require('./config');
 
 class Processor {
-  static async processNewPayloadAddedEvent(payloadHash, sender, target) {
+  static async processPayloadAddedEvent(payloadHash, sender, target) {
     try {
       const storedAuth = {
         sender: sender,
         target: target,
-        isVerified: false,
+        isApproved: false,
         isRevoked: false
       }
       await db.set(payloadHash, storedAuth);
 
     } catch (err) {
-      throw new Error('error when processing NewPayloadAdded event!');
+      throw new Error('error when processing PayloadAdded event!');
     }
   }
 
-  static async processDeviceVerifiedEvent(payloadHash) {
+  static async processDeviceApprovedEvent(payloadHash) {
     try {
       let storedAuth = await db.get(payloadHash);
       if (storedAuth == undefined) throw new Error('payload not found!');
@@ -35,7 +35,7 @@ class Processor {
       }
 
     } catch (err) {
-      return new Error('error when processing DeviceVerified event!');
+      return new Error('error when processing DeviceApproved event!');
     }
   }
 
@@ -64,8 +64,8 @@ class Processor {
 
     const sender = storedAuth.sender;
     const target = storedAuth.target;
-    const isVerified = storedAuth.isVerified;
-    if (isVerified) return res.status(401).send('replay? we already process this before!');
+    const isApproved = storedAuth.isApproved;
+    if (isApproved) return res.status(401).send('replay? we already process this before!');
 
     const isOurDevice = CryptoUtil.verifyPayload(signature, target, vendor.address);
     if (!isOurDevice) return res.status(401).send('invalid signature: not our device!');
@@ -78,7 +78,7 @@ class Processor {
 
     try {
       const txNonce = await db.get('txNonce');
-      contract.verifyAuthNDevice(payloadHash, vendor, txNonce);
+      contract.approveDevice(payloadHash, vendor, txNonce);
       await db.incr('txNonce', 1);
 
       res.status(200).send('authentication attempt successful!');
