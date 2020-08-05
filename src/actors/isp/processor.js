@@ -6,46 +6,46 @@ const DB = require('./db');
 const db = new DB();
 
 class Processor {
-  static async processNewPayloadAddedEvent(payloadHash, sender) {
+  static async processPayloadAddedEvent(payloadHash, sender) {
     try {
       const storedAuth = {
         sender: sender,
-        isVerified: false,
+        isApproved: false,
         isRevoked: false
       }
       await db.set(payloadHash, storedAuth);
 
     } catch (err) {
-      throw new Error('error when processing NewPayloadAdded event!');
+      throw new Error('error when processing PayloadAdded event!');
     }
   }
 
-  static async processGatewayVerifiedEvent(payloadHash, gateway) {
+  static async processGatewayApprovedEvent(payloadHash, gateway) {
     try {
       let storedAuth = await db.get(payloadHash);
       if (storedAuth == undefined) throw new Error('payload not found!');
       else {
-        storedAuth.isVerified = true;
+        storedAuth.isApproved = true;
         storedAuth.gateway = gateway;
         await db.replace(payloadHash, storedAuth);
       }
 
     } catch (err) {
-      throw new Error('error when processing GatewayVerified event!');
+      throw new Error('error when processing GatewayApproved event!');
     }
   }
 
-  static async processUserRegistration(req, res, isp) {
+  static async processDomainOwnerRegistration(req, res, isp) {
     if (req.body.constructor === Object && Object.keys(req.body).length === 0) return res.status(401).send('your request does not have body!');
 
     // a mock ip address for the owner
-    const routerIP = '200.100.10.10';
+    const routerIp = '200.100.10.10';
 
     const address = req.body.address;
     const user = {
       username: req.body.username,
       password: req.body.password,
-      routerIP: routerIP
+      routerIp: routerIp
     };
 
     try {
@@ -54,7 +54,7 @@ class Processor {
       const payloadForOwner = {
         address: isp.address,
         publicKey: isp.publicKey,
-        routerIP: routerIP
+        routerIp: routerIp
       }
 
       return res.status(200).send(payloadForOwner);
@@ -65,23 +65,23 @@ class Processor {
     }
   }
 
-  static async processDomainAuthentication(req, res, contract, isp) {
+  static async processGatewayAuthentication(req, res, contract, isp) {
     if (req.body.constructor === Object && Object.keys(req.body).length === 0) return res.status(401).send('your request does not have body!');
 
     const encryptedPayload = req.body.payload;
 
-    const payloadForISP = await CryptoUtil.decryptPayload(isp.privateKey, encryptedPayload);
-    const payload = payloadForISP.payload;
-    const payloadSignature = payloadForISP.payloadSignature;
+    const payloadForIsp = await CryptoUtil.decryptPayload(isp.privateKey, encryptedPayload);
+    const payload = payloadForIsp.payload;
+    const payloadSignature = payloadForIsp.payloadSignature;
     const payloadHash = CryptoUtil.hashPayload(payload);
 
     const storedAuth = await db.get(payloadHash);
     if (storedAuth == undefined) return res.status(404).send('payload not found!');
 
     const sender = storedAuth.sender;
-    const isVerified = storedAuth.isVerified;
+    const isApproved = storedAuth.isApproved;
     
-    if (isVerified) return res.status(401).send('replay? we already process this before!');
+    if (isApproved) return res.status(401).send('replay? we already process this before!');
 
     const isValid = CryptoUtil.verifyPayload(payloadSignature, payload, sender);
     if (!isValid) return res.status(401).send('invalid signature!');
@@ -91,12 +91,12 @@ class Processor {
     if (
       user.username != payload.username ||
       user.password != payload.password ||
-      user.routerIP != payload.routerIP
+      user.routerIp != payload.routerIp
     ) return res.status(401).send('invalid user authentication payload!');
 
     try {
       const txNonce = await db.get('txNonce');
-      contract.verifyAuthNGateway(payloadHash, payload.routerIP, isp, txNonce);
+      contract.approveGateway(payloadHash, payload.routerIp, isp, txNonce);
       await db.incr('txNonce', 1);
 
       return res.status(200).send('authentication attempt successful!');

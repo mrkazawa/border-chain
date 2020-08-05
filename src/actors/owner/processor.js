@@ -16,24 +16,24 @@ const {
 } = require('./config');
 
 class Processor {
-  static async processNewPayloadAddedEvent(payloadHash, owner, auth, isp) {
+  static async processPayloadAddedEvent(payloadHash, owner, auth, isp) {
     try {
       const exist = await db.get(payloadHash);
-      if (!exist || !exist.isVerified) await Processor.prepareAndSendToISP(owner, auth, isp);
+      if (!exist || !exist.isApproved) await Processor.prepareAndSendToIsp(owner, auth, isp);
       else log(chalk.yellow(`do nothing, we has already processed ${payloadHash} before`));
 
     } catch (err) {
-      return new Error('error when processing NewPayloadAdded event!');
+      return new Error('error when processing PayloadAdded event!');
     }
   }
 
-  static async processGatewayVerifiedEvent(payloadHash, gateway) {
+  static async processGatewayApprovedEvent(payloadHash, gateway) {
     try {
       // store list of approved gateway address in the database
       // this is useful for revocation use case
       const storedAuth = {
         gateway: gateway.address,
-        isVerified: true,
+        isApproved: true,
         isRevoked: false
       }
       await db.set(payloadHash, storedAuth);
@@ -42,17 +42,17 @@ class Processor {
       log(chalk.yellow(registered));
 
     } catch (err) {
-      return new Error('error when processing GatewayVerified event!');
+      return new Error('error when processing GatewayApproved event!');
     }
   }
 
-  static async prepareAndSendToISP(owner, auth, isp) {
+  static async prepareAndSendToIsp(owner, auth, isp) {
     const payloadSignature = CryptoUtil.signPayload(owner.privateKey, auth);
-    const payloadForISP = {
+    const payloadForIsp = {
       payload: auth,
       payloadSignature: payloadSignature
     };
-    const offChainPayload = await CryptoUtil.encryptPayload(isp.publicKey, payloadForISP);
+    const offChainPayload = await CryptoUtil.encryptPayload(isp.publicKey, payloadForIsp);
   
     if (isBenchmarking()) Processor.benchmark(offChainPayload);
     else {

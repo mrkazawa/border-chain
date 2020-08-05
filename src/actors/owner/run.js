@@ -11,7 +11,7 @@ const GATEWAY = CryptoUtil.createNewIdentity();
 
 async function main() {
   const [abi, user, ispInfo] = await prepare();
-  const auth = createAuthenticationPayload(user, ispInfo.routerIP);
+  const auth = createAuthenticationPayload(user, ispInfo.routerIp);
   const authHash = CryptoUtil.hashPayload(auth);
 
   const isp = {
@@ -20,9 +20,9 @@ async function main() {
   }
 
   const contract = new Contract(abi);
-  contract.addNewPayloadAddedEventListener(OWNER, auth, isp);
-  contract.addGatewayVerifiedEventListener(GATEWAY);
-  contract.storeAuthNPayload(authHash, GATEWAY.address, isp.address, OWNER);
+  contract.addPayloadAddedEventListener(OWNER, auth, isp);
+  contract.addGatewayApprovedEventListener(GATEWAY);
+  contract.storePayload(authHash, GATEWAY.address, isp.address, OWNER);
 }
 
 async function prepare() {
@@ -51,8 +51,8 @@ function createUserCredential() {
   };
 }
 
-function createAuthenticationPayload(userCredential, routerIP) {
-  userCredential.routerIP = routerIP;
+function createAuthenticationPayload(userCredential, routerIp) {
+  userCredential.routerIp = routerIp;
   userCredential.timestamp = Date.now();
   userCredential.nonce = CryptoUtil.randomValueBase64(64);
 

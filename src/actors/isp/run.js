@@ -38,8 +38,8 @@ async function runMaster() {
     const [abi, isp] = await prepare();
 
     const contract = new Contract(abi);
-    contract.addNewPayloadAddedEventListener(isp);
-    contract.addGatewayVerifiedEventListener(isp);
+    contract.addPayloadAddedEventListener(isp);
+    contract.addGatewayApprovedEventListener(isp);
   }
 }
 
@@ -86,11 +86,11 @@ async function runWorkers() {
     app.use(bodyParser.json());
 
     app.post('/register', async (req, res) => {
-      Processor.processUserRegistration(req, res, isp);
+      Processor.processDomainOwnerRegistration(req, res, isp);
     });
     
     app.post('/authenticate', async (req, res) => {
-      Processor.processDomainAuthentication(req, res, contract, isp);
+      Processor.processGatewayAuthentication(req, res, contract, isp);
     });
 
     app.listen(HTTP_PORT, () => {

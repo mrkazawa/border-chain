@@ -21,8 +21,8 @@ class Contract {
     this.contract = EthereumUtil.constructSmartContract(abi.abi, this.contractAddress);
   }
 
-  addNewPayloadAddedEventListener(owner, auth, isp) {
-    this.contract.events.NewPayloadAdded({
+  addPayloadAddedEventListener(owner, auth, isp) {
+    this.contract.events.PayloadAdded({
       fromBlock: 0
     }, function (error, event) {
       if (error) log(chalk.red(error));
@@ -31,15 +31,15 @@ class Contract {
       const payloadHash = event.returnValues['payloadHash'];
 
       if (sender == owner.address) {
-        log(chalk.yellow(`Contract event: ${sender} has stored payload ${payloadHash}`));
+        log(chalk.yellow(`Contract event: ${payloadHash} payload is stored`));
 
-        Processor.processNewPayloadAddedEvent(payloadHash, owner, auth, isp);
+        Processor.processPayloadAddedEvent(payloadHash, owner, auth, isp);
       }
     });
   }
 
-  addGatewayVerifiedEventListener(ourGateway) {
-    this.contract.events.GatewayVerified({
+  addGatewayApprovedEventListener(ourGateway) {
+    this.contract.events.GatewayApproved({
       fromBlock: 0
     }, function (error, event) {
       if (error) log(chalk.red(error));
@@ -49,16 +49,16 @@ class Contract {
       const gateway = event.returnValues['gateway'];
 
       if (gateway == ourGateway.address) {
-        log(chalk.yellow(`Contract event: ISP ${sender} has verified payload ${payloadHash} for our gateway ${gateway}`));
+        log(chalk.yellow(`Contract event: ${payloadHash} payload is approved`));
 
-        Processor.processGatewayVerifiedEvent(payloadHash, ourGateway);
+        Processor.processGatewayApprovedEvent(payloadHash, ourGateway);
       }
     });
   }
 
-  async storeAuthNPayload(payloadHash, gatewayAddress, ispAddress, owner) {
+  async storePayload(payloadHash, gatewayAddress, ispAddress, owner) {
     const nonce = await EthereumUtil.getTransactionCount(owner.address);
-    const storeAuth = this.contract.methods.storeAuthNPayload(payloadHash, gatewayAddress, ispAddress).encodeABI();
+    const storeAuth = this.contract.methods.storePayload(payloadHash, gatewayAddress, ispAddress).encodeABI();
     const storeAuthTx = {
       from: owner.address,
       to: this.contractAddress,

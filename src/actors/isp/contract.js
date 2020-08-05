@@ -25,55 +25,55 @@ class Contract {
     this.contract = EthereumUtil.constructSmartContract(abi.abi, this.contractAddress);
   }
 
-  addNewPayloadAddedEventListener(isp) {
-    this.contract.events.NewPayloadAdded({
+  addPayloadAddedEventListener(isp) {
+    this.contract.events.PayloadAdded({
       fromBlock: 0
     }, async function (error, event) {
       if (error) log(chalk.red(error));
   
-      const sender = event.returnValues['sender'];
       const payloadHash = event.returnValues['payloadHash'];
-      const verifier = event.returnValues['verifier'];
+      const sender = event.returnValues['sender'];
+      const approver = event.returnValues['approver'];
   
-      if (verifier == isp.address) {
+      if (approver == isp.address) {
         log(chalk.yellow(`Contract event: ${payloadHash} payload is stored`));
         
-        Processor.processNewPayloadAddedEvent(payloadHash, sender);
+        Processor.processPayloadAddedEvent(payloadHash, sender);
       }
     });
   }
 
-  addGatewayVerifiedEventListener(isp) {
-    this.contract.events.GatewayVerified({
+  addGatewayApprovedEventListener(isp) {
+    this.contract.events.GatewayApproved({
       fromBlock: 0
     }, function (error, event) {
       if (error) log(chalk.red(error));
 
-      const sender = event.returnValues['sender'];
       const payloadHash = event.returnValues['payloadHash'];
+      const sender = event.returnValues['sender'];
       const gateway = event.returnValues['gateway'];
 
       if (sender == isp.address) {
-        log(chalk.yellow(`Contract event: ${payloadHash} payload is verified`));
+        log(chalk.yellow(`Contract event: ${payloadHash} payload is approved`));
 
-        Processor.processGatewayVerifiedEvent(payloadHash, gateway);
+        Processor.processGatewayApprovedEvent(payloadHash, gateway);
       }
     });
   }
 
-  async verifyAuthNGateway(payloadHash, routerIP, isp, txNonce) {
-    const routerIPInBytes = EthereumUtil.convertStringToByte(routerIP);
-    const verifyAuth = this.contract.methods.verifyAuthNGateway(payloadHash, routerIPInBytes).encodeABI();
-    const verifyAuthTx = {
+  async approveGateway(payloadHash, routerIp, isp, txNonce) {
+    const routerIpInBytes = EthereumUtil.convertStringToByte(routerIp);
+    const approveAuth = this.contract.methods.approveGateway(payloadHash, routerIpInBytes).encodeABI();
+    const approveAuthTx = {
       from: isp.address,
       to: this.contractAddress,
       nonce: txNonce,
       gasLimit: 5000000,
       gasPrice: 5000000000,
-      data: verifyAuth
+      data: approveAuth
     };
   
-    const signedTx = CryptoUtil.signTransaction(isp.privateKey, verifyAuthTx);
+    const signedTx = CryptoUtil.signTransaction(isp.privateKey, approveAuthTx);
     if (!isBenchmarking()) EthereumUtil.sendTransaction(signedTx);
   }
 }
