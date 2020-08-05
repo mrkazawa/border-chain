@@ -35,7 +35,12 @@ contract RegistryContract {
         address gateway,
         address device
     );
-    event AccessApproved(bytes32 payloadHash, address sender, address target, uint expiryTime);
+    event AccessApproved(
+        bytes32 payloadHash,
+        address sender,
+        address target,
+        uint256 expiryTime
+    );
     event GatewayRevoked(bytes32 payloadHash, address sender, address gateway);
     event DeviceRevoked(bytes32 payloadHash, address sender, address device);
     event AccessRevoked(bytes32 payloadHash, address sender, address target);
@@ -99,7 +104,8 @@ contract RegistryContract {
 
     modifier onlyForSourceOrApprover(bytes32 payloadHash) {
         require(
-            payloads[payloadHash].source == msg.sender || payloads[payloadHash].approver == msg.sender,
+            payloads[payloadHash].source == msg.sender ||
+                payloads[payloadHash].approver == msg.sender,
             "only for original source or approver"
         );
         _;
@@ -220,7 +226,11 @@ contract RegistryContract {
     {
         payloads[payloadHash].isRevoked = true;
 
-        emit AccessRevoked(payloadHash, msg.sender, payloads[payloadHash].target);
+        emit AccessRevoked(
+            payloadHash,
+            msg.sender,
+            payloads[payloadHash].target
+        );
     }
 
     function isTrustedGateway(address gateway) public view returns (bool) {
@@ -231,5 +241,16 @@ contract RegistryContract {
         return (trustedGateways[trustedDevices[device]] != 0);
     }
 
-    //TODO: add check access status
+    function isValidAccess(bytes32 payloadHash)
+        public
+        view
+        payloadMustExist(payloadHash)
+        returns (bool)
+    {
+        if (payloads[payloadHash].isApproved == false) return false;
+        else if (payloads[payloadHash].isRevoked == true) return false;
+        else if (payloads[payloadHash].expiryTime < block.timestamp)
+            return false;
+        else return true;
+    }
 }

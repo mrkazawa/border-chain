@@ -78,6 +78,11 @@ describe('Service Authorization Part 2 -- Approving Access Test', function () {
       const timestamp = block.timestamp;
       const expiryTime = timestamp + expiredIn;
 
+      let status = await RC.isValidAccess(payloadHash, {
+        from: observerAddress
+      });
+      assert.equal(status, false, 'this hash is invalid');
+
       const tx = await RC.approveAccess(payloadHash, expiredIn, {
         from: gatewayAddress
       });
@@ -89,6 +94,11 @@ describe('Service Authorization Part 2 -- Approving Access Test', function () {
           ev.expiryTime == expiryTime
         );
       });
+
+      status = await RC.isValidAccess(payloadHash, {
+        from: observerAddress
+      });
+      assert.equal(status, true, 'this hash is valid now');
     });
   });
 

@@ -97,6 +97,11 @@ describe('Service Authorization Part 3 -- Revoking Access Test', function () {
     });
 
     it('GATEWAY can revoke the ACCESS properly', async function () {
+      let status = await RC.isValidAccess(payloadHash, {
+        from: observerAddress
+      });
+      assert.equal(status, true, 'this hash is valid');
+
       const tx = await RC.revokeAccess(payloadHash, {
         from: gatewayAddress
       });
@@ -105,9 +110,19 @@ describe('Service Authorization Part 3 -- Revoking Access Test', function () {
         sender: gatewayAddress,
         target: serviceAddress
       });
+
+      status = await RC.isValidAccess(payloadHash, {
+        from: observerAddress
+      });
+      assert.equal(status, false, 'this hash is now invalid');
     });
 
     it('SERVICE can revoke the ACCESS properly', async function () {
+      let status = await RC.isValidAccess(payloadHash, {
+        from: observerAddress
+      });
+      assert.equal(status, true, 'this hash is valid');
+
       const tx = await RC.revokeAccess(payloadHash, {
         from: serviceAddress
       });
@@ -116,6 +131,11 @@ describe('Service Authorization Part 3 -- Revoking Access Test', function () {
         sender: serviceAddress,
         target: serviceAddress
       });
+
+      status = await RC.isValidAccess(payloadHash, {
+        from: observerAddress
+      });
+      assert.equal(status, false, 'this hash is now invalid');
     });
   });
 
