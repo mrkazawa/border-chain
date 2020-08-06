@@ -1,6 +1,6 @@
 const Memcached = require('memcached');
 
-class DB {
+class Database {
   constructor() {
     if ('instance' in this.constructor) {
       return this.constructor.instance;
@@ -57,4 +57,4 @@ class DB {
   }
 }
 
-module.exports = DB;
+module.exports = Database;

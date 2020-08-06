@@ -2,18 +2,12 @@ const Database = require('./db');
 const db = new Database();
 
 class PayloadDatabase {
-  static async storeNewPayload(auth, payloadHash, authOption, signature, vendorAddress, vendorPublicKey, deviceAddress) {
+  static async storeNewPayload(payloadHash, sender, target, approver) {
     try {
       const payload = {
-        auth: auth,
-        authHash: payloadHash,
-        authOption: authOption,
-        signature: signature,
-        vendorAddress: vendorAddress,
-        vendorPublicKey: vendorPublicKey,
-        deviceAddress: deviceAddress,
-        approverAddress: '',
-        gatewayAddress: '',
+        sender: sender,
+        target: target,
+        approver: approver,
         isStored: false,
         isApproved: false,
         isRevoked: false
@@ -26,14 +20,11 @@ class PayloadDatabase {
     }
   }
 
-  static async updatePayloadStateToStored(payloadHash, gateway, device) {
+  static async updatePayloadStateToStored(payloadHash) {
     try {
       const storedPayload = await db.get(payloadHash);
-
       if (!storedPayload) throw new Error('payload hash does not exist!');
-      if (storedPayload.deviceAddress != device) throw new Error('payload hash and device does not match!');
 
-      storedPayload.gatewayAddress = gateway;
       storedPayload.isStored = true;
 
       await db.replace(payloadHash, storedPayload);
@@ -43,14 +34,13 @@ class PayloadDatabase {
     }
   }
 
-  static async updatePayloadStateToApproved(payloadHash, approver, device) {
+  static async updatePayloadStateToApproved(payloadHash, approver) {
     try {
       const storedPayload = await db.get(payloadHash);
 
       if (!storedPayload) throw new Error('payload hash does not exist!');
-      if (storedPayload.deviceAddress != device) throw new Error('payload hash and device does not match!');
+      if (storedPayload.approver != approver) throw new Error('payload hash and approver does not match!');
 
-      storedPayload.approverAddress = approver;
       storedPayload.isApproved = true;
 
       await db.replace(payloadHash, storedPayload);

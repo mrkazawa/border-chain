@@ -2,11 +2,19 @@ const Database = require('./db');
 const db = new Database();
 
 class SystemDatabase {
-  static async initiateGatewayIdentity(gateway) {
+  static async initiateVendorIdentity(vendor) {
     try {
-      await db.set('gateway', gateway);
+      await db.set('vendor', vendor);
     } catch (err) {
-      throw new Error(`error when initiating gateway identity! ${err}`);
+      throw new Error(`error when initiating vendor identity! ${err}`);
+    }
+  }
+
+  static async initiateDeviceIdentity(device) {
+    try {
+      await db.set('device', device);
+    } catch (err) {
+      throw new Error(`error when initiating device identity! ${err}`);
     }
   }
 
@@ -26,11 +34,19 @@ class SystemDatabase {
     }
   }
 
-  static async getGatewayIdentity() {
+  static async getVendorIdentity() {
     try {
-      return await db.get('gateway');
+      return await db.get('vendor');
     } catch (err) {
-      throw new Error(`error when getting gateway identity! ${err}`);
+      throw new Error(`error when getting vendor identity! ${err}`);
+    }
+  }
+
+  static async getDeviceIdentity() {
+    try {
+      return await db.get('device');
+    } catch (err) {
+      throw new Error(`error when getting device identity! ${err}`);
     }
   }
 

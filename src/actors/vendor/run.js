@@ -14,13 +14,11 @@ const EthereumUtil = require('../utils/ethereum-util');
 const Messenger = require('./messenger');
 const Processor = require('./processor');
 const Contract = require('./contract');
+const SystemDatabase = require('./db/system_db');
 
 const {
   DEVICE_PROPERTIES
 } = require('./config');
-
-const DB = require('./db');
-const db = new DB();
 
 async function runMaster() {
   if (cluster.isMaster) {
@@ -39,46 +37,41 @@ async function runMaster() {
       cluster.fork();
     });
 
-    const [abi, vendor] = await prepare();
+    const [abi, vendor] = await initiateSystemSharedParameters();
     const contract = new Contract(abi);
     contract.addPayloadAddedEventListener(vendor);
     contract.addDeviceApprovedEventListener(vendor);
   }
 }
 
-async function prepare() {
-  try {
-    const vendor = CryptoUtil.createNewIdentity();
-    const device = CryptoUtil.createNewIdentity();
+async function initiateSystemSharedParameters() {
+  const vendor = CryptoUtil.createNewIdentity();
+  const device = CryptoUtil.createNewIdentity();
 
-    const signature = CryptoUtil.signPayload(vendor.privateKey, device.address);
-    const deviceProperties = appendToDeviceProperties(DEVICE_PROPERTIES, signature, device, vendor);
+  const signature = CryptoUtil.signPayload(vendor.privateKey, device.address);
+  const deviceProperties = appendToDeviceProperties(DEVICE_PROPERTIES, signature, device, vendor);
 
-    const [assigned, deviceRegistered, vendorRegistered, abi] = await Promise.all([
-      Messenger.seedEtherToVendor(vendor.address),
-      Messenger.registerDeviceToAdmin(deviceProperties),
-      Messenger.registerVendorToAdmin(vendor),
-      Messenger.getContractAbi()
-    ]);
+  const [assigned, deviceRegistered, vendorRegistered, abi] = await Promise.all([
+    Messenger.seedEtherToVendor(vendor.address),
+    Messenger.registerDeviceToAdmin(deviceProperties),
+    Messenger.registerVendorToAdmin(vendor),
+    Messenger.getContractAbi()
+  ]);
 
-    log(chalk.yellow(assigned));
-    log(chalk.yellow(deviceRegistered));
-    log(chalk.yellow(vendorRegistered));
+  log(chalk.yellow(assigned));
+  log(chalk.yellow(deviceRegistered));
+  log(chalk.yellow(vendorRegistered));
 
-    let currentTxNonce = await EthereumUtil.getTransactionCount(vendor.address);
+  let currentTxNonce = await EthereumUtil.getTransactionCount(vendor.address);
 
-    await Promise.all([
-      db.set('vendor', vendor),
-      db.set('device', deviceProperties),
-      db.set('abi', abi),
-      db.set('txNonce', currentTxNonce)
-    ]);
+  await Promise.all([
+    SystemDatabase.initiateVendorIdentity(vendor),
+    SystemDatabase.initiateDeviceIdentity(deviceProperties),
+    SystemDatabase.initiateContractAbi(abi),
+    SystemDatabase.initiateTxNonce(currentTxNonce)
+  ]);
 
-    return [abi, vendor];
-
-  } catch (err) {
-    throw new Error('error when preparing!');
-  }
+  return [abi, vendor];
 }
 
 function appendToDeviceProperties(deviceProperties, signature, device, vendor) {
@@ -94,14 +87,7 @@ function appendToDeviceProperties(deviceProperties, signature, device, vendor) {
 
 async function runWorkers() {
   if (cluster.isWorker) {
-    const [vendor, device, abi] = await Promise.all([
-      db.get('vendor'),
-      db.get('device'),
-      db.get('abi')
-    ]);
-
-    if (vendor == undefined || device == undefined || abi == undefined) throw new Error('worker cannot get shared parameters!');
-
+    const [vendor, device, abi] = await getSystemSharedParameters();
     const contract = new Contract(abi);
 
     const app = express();
@@ -115,6 +101,18 @@ async function runWorkers() {
       log(`Running ${process.pid}: hit me up on ${HOSTNAME}.local:${HTTP_PORT}`);
     });
   }
+}
+
+async function getSystemSharedParameters() {
+  const [vendor, device, abi] = await Promise.all([
+    SystemDatabase.getVendorIdentity(),
+    SystemDatabase.getDeviceIdentity(),
+    SystemDatabase.getContractAbi()
+  ]);
+
+  if (vendor == undefined || device == undefined || abi == undefined) throw new Error('worker cannot get shared parameters!');
+
+  return [vendor, device, abi];
 }
 
 async function run() {

@@ -8,8 +8,7 @@ const isBenchmarking = () => {
 const CryptoUtil = require('../utils/crypto-util');
 const BenchUtil = require('../utils/bench-util');
 const Messenger = require('./messenger');
-const DB = require('./db');
-const db = new DB();
+const PayloadDatabase = require('./db/payload_db');
 
 const {
   ISP_AUTHN_URL
@@ -17,32 +16,20 @@ const {
 
 class Processor {
   static async processPayloadAddedEvent(payloadHash, owner, auth, isp) {
-    try {
-      const storedAuth = await db.get(payloadHash);
-      if (!storedAuth || !storedAuth.isApproved) await Processor.prepareAndSendToIsp(owner, auth, isp);
-      else log(chalk.yellow(`do nothing, we has already processed ${payloadHash} before`));
-
-    } catch (err) {
-      return new Error('error when processing PayloadAdded event!');
+    if (await PayloadDatabase.isPayloadApproved(payloadHash)) log(chalk.yellow(`do nothing, we have already processed ${payloadHash} before`));
+    else {
+      await PayloadDatabase.updatePayloadStateToStored(payloadHash);
+      await Processor.prepareAndSendToIsp(owner, auth, isp);
     }
   }
 
-  static async processGatewayApprovedEvent(payloadHash, gateway) {
-    try {
-      // store list of approved gateway address in the database
-      // this is useful for revocation use case
-      const storedAuth = {
-        gateway: gateway.address,
-        isApproved: true,
-        isRevoked: false
-      }
-      await db.set(payloadHash, storedAuth);
+  static async processGatewayApprovedEvent(payloadHash, approver, gateway) {
+    if (await PayloadDatabase.isPayloadApproved(payloadHash)) log(chalk.yellow(`do nothing, we have already processed ${payloadHash} before`));
+    else {
+      await PayloadDatabase.updatePayloadStateToApproved(payloadHash, approver);
 
       const registered = await Messenger.registerGatewayToAdmin(gateway.address, gateway.publicKey, gateway.privateKey);
       log(chalk.yellow(registered));
-
-    } catch (err) {
-      return new Error('error when processing GatewayApproved event!');
     }
   }
 

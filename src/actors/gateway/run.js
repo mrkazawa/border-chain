@@ -13,9 +13,7 @@ const EthereumUtil = require('../utils/ethereum-util');
 const Messenger = require('./messenger');
 const Processor = require('./processor');
 const Contract = require('./contract');
-
-const DB = require('./db/db');
-const db = new DB();
+const SystemDatabase = require('./db/system_db');
 
 async function runMaster() {
   if (cluster.isMaster) {
@@ -34,47 +32,36 @@ async function runMaster() {
       cluster.fork();
     });
 
-    const [abi, gateway] = await prepare();
+    const [abi, gateway] = await initiateSystemSharedParameters();
     const contract = new Contract(abi);
     contract.addPayloadAddedEventListener(gateway);
     contract.addDeviceApprovedEventListener(gateway);
   }
 }
 
-async function prepare() {
-  try {
-    const [gateway, abi] = await Promise.all([
-      Messenger.getGatewayInfo(),
-      Messenger.getContractAbi()
-    ]);
+async function initiateSystemSharedParameters() {
+  const [gateway, abi] = await Promise.all([
+    Messenger.getGatewayInfo(),
+    Messenger.getContractAbi()
+  ]);
 
-    const assigned = await Messenger.seedEtherToGateway(gateway.address);
-    log(chalk.yellow(assigned));
+  const assigned = await Messenger.seedEtherToGateway(gateway.address);
+  log(chalk.yellow(assigned));
 
-    const currentTxNonce = await EthereumUtil.getTransactionCount(gateway.address);
+  const currentTxNonce = await EthereumUtil.getTransactionCount(gateway.address);
 
-    await Promise.all([
-      db.set('gateway', gateway),
-      db.set('abi', abi),
-      db.set('txNonce', currentTxNonce)
-    ]);
+  await Promise.all([
+    SystemDatabase.initiateGatewayIdentity(gateway),
+    SystemDatabase.initiateContractAbi(abi),
+    SystemDatabase.initiateTxNonce(currentTxNonce)
+  ]);
 
-    return [abi, gateway];
-
-  } catch (err) {
-    throw new Error('error when preparing!');
-  }
+  return [abi, gateway];
 }
 
 async function runWorkers() {
   if (cluster.isWorker) {
-    const [gateway, abi] = await Promise.all([
-      db.get('gateway'),
-      db.get('abi')
-    ]);
-
-    if (gateway == undefined || abi == undefined) throw new Error('worker cannot get shared parameters!');
-
+    const [gateway, abi] = await getSystemSharedParameters();
     const contract = new Contract(abi);
 
     const app = express();
@@ -88,6 +75,17 @@ async function runWorkers() {
       log(`Running ${process.pid}: hit me up on ${HOSTNAME}.local:${HTTP_PORT}`);
     });
   }
+}
+
+async function getSystemSharedParameters() {
+  const [gateway, abi] = await Promise.all([
+    SystemDatabase.getGatewayIdentity(),
+    SystemDatabase.getContractAbi()
+  ]);
+
+  if (gateway == undefined || abi == undefined) throw new Error('worker cannot get shared parameters!');
+
+  return [gateway, abi];
 }
 
 async function run() {

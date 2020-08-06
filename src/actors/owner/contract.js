@@ -45,12 +45,13 @@ class Contract {
       if (error) log(chalk.red(error));
 
       const payloadHash = event.returnValues['payloadHash'];
+      const approver = event.returnValues['sender'];
       const gateway = event.returnValues['gateway'];
 
       if (gateway == ourGateway.address) {
         log(chalk.yellow(`Contract event: ${payloadHash} payload is approved`));
 
-        Processor.processGatewayApprovedEvent(payloadHash, ourGateway);
+        Processor.processGatewayApprovedEvent(payloadHash, approver, ourGateway);
       }
     });
   }

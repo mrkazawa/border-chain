@@ -33,12 +33,13 @@ class Contract {
   
       const payloadHash = event.returnValues['payloadHash'];
       const sender = event.returnValues['sender'];
+      const target = event.returnValues['target'];
       const approver = event.returnValues['approver'];
   
       if (approver == isp.address) {
         log(chalk.yellow(`Contract event: ${payloadHash} payload is stored`));
         
-        Processor.processPayloadAddedEvent(payloadHash, sender);
+        Processor.processPayloadAddedEvent(payloadHash, sender, target, approver);
       }
     });
   }
@@ -51,12 +52,11 @@ class Contract {
 
       const payloadHash = event.returnValues['payloadHash'];
       const sender = event.returnValues['sender'];
-      const gateway = event.returnValues['gateway'];
 
       if (sender == isp.address) {
         log(chalk.yellow(`Contract event: ${payloadHash} payload is approved`));
 
-        Processor.processGatewayApprovedEvent(payloadHash, gateway);
+        Processor.processGatewayApprovedEvent(payloadHash);
       }
     });
   }

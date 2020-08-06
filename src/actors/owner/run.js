@@ -5,12 +5,13 @@ const CryptoUtil = require('../utils/crypto-util');
 
 const Contract = require('./contract');
 const Messenger = require('./messenger');
+const PayloadDatabase = require('./db/payload_db');
 
 const OWNER = CryptoUtil.createNewIdentity();
 const GATEWAY = CryptoUtil.createNewIdentity();
 
 async function main() {
-  const [abi, user, ispInfo] = await prepare();
+  const [abi, user, ispInfo] = await initiateSystemParameter();
   const auth = createAuthenticationPayload(user, ispInfo.routerIp);
   const authHash = CryptoUtil.hashPayload(auth);
 
@@ -23,9 +24,11 @@ async function main() {
   contract.addPayloadAddedEventListener(OWNER, auth, isp);
   contract.addGatewayApprovedEventListener(GATEWAY);
   contract.storePayload(authHash, GATEWAY.address, isp.address, OWNER);
+
+  PayloadDatabase.storeNewPayload(authHash, OWNER.address, GATEWAY.address, isp.address);
 }
 
-async function prepare() {
+async function initiateSystemParameter() {
   try {
     const [assigned, abi] = await Promise.all([
       Messenger.seedEtherToOwner(OWNER.address),
@@ -34,7 +37,7 @@ async function prepare() {
 
     log(chalk.yellow(assigned));
 
-    const user = createUserCredential();
+    const user = createDomainOwnerCredential();
     const ispInfo = await Messenger.sendUserRegistrationToIsp(OWNER.address, user.username, user.password);
 
     return [abi, user, ispInfo];
@@ -44,7 +47,7 @@ async function prepare() {
   }
 }
 
-function createUserCredential() {
+function createDomainOwnerCredential() {
   return {
     username: 'john',
     password: 'fish'

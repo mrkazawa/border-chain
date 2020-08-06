@@ -31,15 +31,15 @@ class Contract {
     }, async function (error, event) {
       if (error) log(chalk.red(error));
   
-      const sender = event.returnValues['sender'];
       const payloadHash = event.returnValues['payloadHash'];
+      const sender = event.returnValues['sender'];
       const target = event.returnValues['target'];
       const approver = event.returnValues['approver'];
   
       if (approver == vendor.address) {
         log(chalk.yellow(`Contract event: ${payloadHash} payload is stored`));
 
-        Processor.processPayloadAddedEvent(payloadHash, sender, target);
+        Processor.processPayloadAddedEvent(payloadHash, sender, target, approver);
       }
     });
   }
@@ -50,8 +50,8 @@ class Contract {
     }, function (error, event) {
       if (error) log(chalk.red(error));
 
-      const sender = event.returnValues['sender'];
       const payloadHash = event.returnValues['payloadHash'];
+      const sender = event.returnValues['sender'];
 
       if (sender == vendor.address) {
         log(chalk.yellow(`Contract event: ${payloadHash} payload is approved`));

@@ -33,11 +33,12 @@ class Contract {
 
       const payloadHash = event.returnValues['payloadHash'];
       const sender = event.returnValues['sender'];
+      const target = event.returnValues['target'];
 
       if (sender == gateway.address) {
         log(chalk.yellow(`Contract event: ${payloadHash} payload is stored`));
 
-        Processor.processPayloadAddedEvent(payloadHash, gateway);
+        Processor.processPayloadAddedEvent(payloadHash, target, gateway);
       }
     });
   }
@@ -56,7 +57,7 @@ class Contract {
       if (gateway == ourGateway.address) {
         log(chalk.yellow(`Contract event: ${payloadHash} payload is approved`));
 
-        Processor.processDeviceApprovedEvent(payloadHash, sender, gateway, device);
+        Processor.processDeviceApprovedEvent(payloadHash, sender, device);
       }
     });
   }

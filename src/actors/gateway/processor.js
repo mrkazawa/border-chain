@@ -19,14 +19,17 @@ const {
 } = require('./config');
 
 class Processor {
-  static async processPayloadAddedEvent(payloadHash, gateway) {
+  static async processPayloadAddedEvent(payloadHash, target, gateway) {
     if (await PayloadDatabase.isPayloadApproved(payloadHash)) log(chalk.yellow(`do nothing, we have already processed ${payloadHash} before`));
-    else await Processor.prepareAndSendToVendor(payloadHash, gateway);
+    else {
+      await PayloadDatabase.updatePayloadStateToStored(payloadHash, gateway.address, target);
+      await Processor.prepareAndSendToVendor(payloadHash, gateway);
+    }
   }
 
-  static async processDeviceApprovedEvent(payloadHash, sender, gateway, device) {
+  static async processDeviceApprovedEvent(payloadHash, sender, device) {
     if (await PayloadDatabase.isPayloadApproved(payloadHash)) log(chalk.yellow(`do nothing, we have already processed ${payloadHash} before`));
-    else await PayloadDatabase.updatePayloadStateToApproved(payloadHash, sender, gateway, device);
+    else await PayloadDatabase.updatePayloadStateToApproved(payloadHash, sender, device);
   }
 
   static async prepareAndSendToVendor(payloadHash, gateway) {
@@ -35,7 +38,7 @@ class Processor {
       authOption: storedPayload.authOption,
       auth: storedPayload.auth,
       signature: storedPayload.signature
-    }
+    };
 
     const payloadSignature = CryptoUtil.signPayload(gateway.privateKey, strippedPayload);
     const payloadForVendor = {

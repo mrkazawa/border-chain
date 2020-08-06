@@ -2,41 +2,22 @@ const chalk = require('chalk');
 const log = console.log;
 
 const CryptoUtil = require('../utils/crypto-util');
-const DB = require('./db');
-const db = new DB();
+const PayloadDatabase = require('./db/payload_db');
+const SystemDatabase = require('./db/system_db');
 
 const {
   DEVICE_AUTHN_OPTION
 } = require('./config');
 
 class Processor {
-  static async processPayloadAddedEvent(payloadHash, sender, target) {
-    try {
-      const storedAuth = {
-        sender: sender,
-        target: target,
-        isApproved: false,
-        isRevoked: false
-      }
-      await db.set(payloadHash, storedAuth);
-
-    } catch (err) {
-      throw new Error('error when processing PayloadAdded event!');
-    }
+  static async processPayloadAddedEvent(payloadHash, sender, target, approver) {
+    if (await PayloadDatabase.isPayloadApproved(payloadHash)) log(chalk.yellow(`do nothing, we have already processed ${payloadHash} before`));
+    else await PayloadDatabase.storeNewPayload(payloadHash, sender, target, approver);
   }
 
   static async processDeviceApprovedEvent(payloadHash) {
-    try {
-      let storedAuth = await db.get(payloadHash);
-      if (storedAuth == undefined) throw new Error('payload not found!');
-      else {
-        storedAuth.isVerified = true;
-        await db.replace(payloadHash, storedAuth);
-      }
-
-    } catch (err) {
-      return new Error('error when processing DeviceApproved event!');
-    }
+    if (await PayloadDatabase.isPayloadApproved(payloadHash)) log(chalk.yellow(`do nothing, we have already processed ${payloadHash} before`));
+    else await PayloadDatabase.updatePayloadStateToApproved(payloadHash);
   }
 
   static async processDeviceAuthentication(req, res, contract, vendor, device) {
@@ -59,12 +40,12 @@ class Processor {
     ) payloadHash = CryptoUtil.hashPayload(auth.auth);
     else payloadHash = CryptoUtil.hashPayload(auth);
 
-    const storedAuth = await db.get(payloadHash);
-    if (storedAuth == undefined) return res.status(404).send('payload not found!');
+    const storedPayload = await PayloadDatabase.getPayload(payloadHash);
+    if (!storedPayload) return res.status(404).send('payload not found!');
 
-    const sender = storedAuth.sender;
-    const target = storedAuth.target;
-    const isApproved = storedAuth.isApproved;
+    const sender = storedPayload.sender;
+    const target = storedPayload.target;
+    const isApproved = storedPayload.isApproved;
     if (isApproved) return res.status(401).send('replay? we already process this before!');
 
     const isOurDevice = CryptoUtil.verifyPayload(signature, target, vendor.address);
@@ -76,17 +57,11 @@ class Processor {
     const isPayloadValid = Processor.verifyDeviceAuthPayload(authOption, auth, target, device);
     if (!isPayloadValid) return res.status(401).send('invalid device authentication payload!');
 
-    try {
-      const txNonce = await db.get('txNonce');
-      contract.approveDevice(payloadHash, vendor, txNonce);
-      await db.incr('txNonce', 1);
+    const txNonce = await SystemDatabase.getCurrentTxNonce();
+    contract.approveDevice(payloadHash, vendor, txNonce);
+    await SystemDatabase.incrementTxNonce();
 
-      res.status(200).send('authentication attempt successful!');
-
-    } catch (err) {
-      log(chalk.red(`internal error: ${err}`));
-      return res.status(500).send(`internal error: ${err}`);
-    }
+    return res.status(200).send('authentication attempt successful!');
   }
 
   static verifyDeviceAuthPayload(authOption, receivedAuth, target, device) {

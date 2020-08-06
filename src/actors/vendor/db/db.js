@@ -1,6 +1,6 @@
 const Memcached = require('memcached');
 
-class DB {
+class Database {
   constructor() {
     if ('instance' in this.constructor) {
       return this.constructor.instance;
@@ -14,6 +14,15 @@ class DB {
   set(key, value, ttl = 2592000) {
     return new Promise((resolve, reject) => {
       this.memcached.set(key, value, ttl, (err) => {
+        if (err) reject(err);
+        resolve(true);
+      });
+    });
+  }
+
+  replace(key, value, ttl = 2592000) {
+    return new Promise((resolve, reject) => {
+      this.memcached.replace(key, value, ttl, (err) => {
         if (err) reject(err);
         resolve(true);
       });
@@ -37,6 +46,15 @@ class DB {
       });
     });
   }
+
+  incr(key, increment) {
+    return new Promise((resolve, reject) => {
+      this.memcached.incr(key, increment, (err) => {
+        if (err) reject(err);
+        resolve(true);
+      });
+    });
+  }
 }
 
-module.exports = DB;
+module.exports = Database;

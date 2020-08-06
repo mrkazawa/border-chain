@@ -2,11 +2,11 @@ const Database = require('./db');
 const db = new Database();
 
 class SystemDatabase {
-  static async initiateGatewayIdentity(gateway) {
+  static async initiateIspIdentity(gateway) {
     try {
-      await db.set('gateway', gateway);
+      await db.set('isp', gateway);
     } catch (err) {
-      throw new Error(`error when initiating gateway identity! ${err}`);
+      throw new Error(`error when initiating isp identity! ${err}`);
     }
   }
 
@@ -26,11 +26,11 @@ class SystemDatabase {
     }
   }
 
-  static async getGatewayIdentity() {
+  static async getIspIdentity() {
     try {
-      return await db.get('gateway');
+      return await db.get('isp');
     } catch (err) {
-      throw new Error(`error when getting gateway identity! ${err}`);
+      throw new Error(`error when getting isp identity! ${err}`);
     }
   }
 
