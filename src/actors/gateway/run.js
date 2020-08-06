@@ -67,6 +67,10 @@ async function runWorkers() {
     const app = express();
     app.use(bodyParser.json());
 
+    app.get('/accesses', async (req, res) => {
+      Processor.processAccessList(req, res, gateway);
+    });
+
     app.post('/authenticate', async (req, res) => {
       Processor.processDeviceAuthentication(req, res, contract, gateway);
     });

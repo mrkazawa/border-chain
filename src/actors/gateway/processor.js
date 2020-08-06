@@ -95,6 +95,22 @@ class Processor {
 
     return res.status(200).send('payload received, forwarding to vendor!');
   }
+
+  static async processAccessList(req, res, gateway) {
+    const accesses = [
+      'resource1',
+      'resource2',
+      'resource3'
+    ]; // mock of list of accesses
+
+    const accessesSignature = CryptoUtil.signPayload(gateway.privateKey, accesses);
+    const accessesForService = {
+      accesses: accesses,
+      accessesSignature: accessesSignature
+    }
+
+    return res.status(200).send(accessesForService);
+  }
 }
 
 module.exports = Processor;

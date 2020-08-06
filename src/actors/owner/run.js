@@ -11,7 +11,7 @@ const OWNER = CryptoUtil.createNewIdentity();
 const GATEWAY = CryptoUtil.createNewIdentity();
 
 async function main() {
-  const [abi, user, ispInfo] = await initiateSystemParameter();
+  const [abi, user, ispInfo] = await initiateSystemParameters();
   const auth = createAuthenticationPayload(user, ispInfo.routerIp);
   const authHash = CryptoUtil.hashPayload(auth);
 
@@ -28,7 +28,7 @@ async function main() {
   PayloadDatabase.storeNewPayload(authHash, OWNER.address, GATEWAY.address, isp.address);
 }
 
-async function initiateSystemParameter() {
+async function initiateSystemParameters() {
   try {
     const [assigned, abi] = await Promise.all([
       Messenger.seedEtherToOwner(OWNER.address),
@@ -43,7 +43,7 @@ async function initiateSystemParameter() {
     return [abi, user, ispInfo];
 
   } catch (err) {
-    throw new Error('error when preparing!');
+    throw new Error(`error when initiating system parameters! ${err}`);
   }
 }
 

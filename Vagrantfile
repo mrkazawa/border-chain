@@ -6,7 +6,7 @@
 
 BOX_IMAGE = "bento/ubuntu-16.04"
 BOX_MEMORY = "4096"
-NODE_COUNT = 6
+NODE_COUNT = 7
 
 Vagrant.configure("2") do |config|
   config.ssh.compression = false
@@ -23,13 +23,13 @@ Vagrant.configure("2") do |config|
         vb.name = "actor#{i}"
         vb.memory = BOX_MEMORY
         case i
-        when 1,2,3 # for admin, owner, and device
+        when 1,2,3,7 # for admin, IoT domain owner, IoT device, and IoT service
           vb.cpus = 1
         when 4 # for isp
           vb.cpus = 8
-        when 5 # for gateway
+        when 5 # for IoT gateway
           vb.cpus = 4
-        when 6 # for vendor
+        when 6 # for IoT vendor
           vb.cpus = 8
         end
       end
