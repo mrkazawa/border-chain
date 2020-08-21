@@ -34,11 +34,15 @@ class Contract {
       const payloadHash = event.returnValues['payloadHash'];
       const sender = event.returnValues['sender'];
       const target = event.returnValues['target'];
+      const approver = event.returnValues['approver'];
 
       if (sender == gateway.address) {
-        log(chalk.yellow(`Contract event: ${payloadHash} payload is stored`));
-
-        Processor.processPayloadAddedEvent(payloadHash, target, gateway);
+        log(chalk.yellow(`Contract event: ${payloadHash} authentication payload is stored`));
+        Processor.processAuthenticationPayloadAddedEvent(payloadHash, target, gateway);
+      
+      } else if (approver == gateway.address) {
+        log(chalk.yellow(`Contract event: ${payloadHash} authorization payload is stored`));
+        Processor.processAuthorizationPayloadAddedEvent(payloadHash, sender, target, approver);
       }
     });
   }

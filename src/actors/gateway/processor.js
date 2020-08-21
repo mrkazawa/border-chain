@@ -12,6 +12,7 @@ const CryptoUtil = require('../utils/crypto-util');
 const BenchUtil = require('../utils/bench-util');
 const Messenger = require('./messenger');
 const PayloadDatabase = require('./db/payload_db');
+const AuthorizationDatabase = require('./db/authorization_db');
 const SystemDatabase = require('./db/system_db');
 
 const {
@@ -19,12 +20,17 @@ const {
 } = require('./config');
 
 class Processor {
-  static async processPayloadAddedEvent(payloadHash, target, gateway) {
+  static async processAuthenticationPayloadAddedEvent(payloadHash, target, gateway) {
     if (await PayloadDatabase.isPayloadApproved(payloadHash)) log(chalk.yellow(`do nothing, we have already processed ${payloadHash} before`));
     else {
       await PayloadDatabase.updatePayloadStateToStored(payloadHash, gateway.address, target);
       await Processor.prepareAndSendToVendor(payloadHash, gateway);
     }
+  }
+
+  static async processAuthorizationPayloadAddedEvent(payloadHash, sender, target, approver) {
+    if (await AuthorizationDatabase.isPayloadApproved(payloadHash)) log(chalk.yellow(`do nothing, we have already processed ${payloadHash} before`));
+    else await AuthorizationDatabase.storeNewPayload(payloadHash, sender, target, approver);
   }
 
   static async processDeviceApprovedEvent(payloadHash, sender, device) {
@@ -104,12 +110,50 @@ class Processor {
     ]; // mock of list of accesses
 
     const accessesSignature = CryptoUtil.signPayload(gateway.privateKey, accesses);
-    const accessesForService = {
+    const responses = {
       accesses: accesses,
       accessesSignature: accessesSignature
     }
 
-    return res.status(200).send(accessesForService);
+    return res.status(200).send(responses);
+  }
+
+  static async processServiceAuthorization(req, res, contract, gateway) {
+    if (req.body.constructor === Object && Object.keys(req.body).length === 0) return res.status(401).send('your request does not have body!');
+
+    const encryptedPayload = req.body.payload;
+
+    const payloadForGateway = await CryptoUtil.decryptPayload(gateway.privateKey, encryptedPayload);
+    const payload = payloadForGateway.payload;
+    const payloadSignature = payloadForGateway.payloadSignature;
+    const payloadHash = CryptoUtil.hashPayload(payload);
+
+    const storedPayload = await AuthorizationDatabase.getPayload(payloadHash);
+    if (!storedPayload) return res.status(404).send('payload not found!');
+
+    const sender = storedPayload.sender;
+    const isApproved = storedPayload.isApproved;
+    if (isApproved) return res.status(401).send('replay? we already process this before!');
+
+    const isValid = CryptoUtil.verifyPayload(payloadSignature, payload, sender);
+    if (!isValid) return res.status(401).send('invalid signature!');
+
+
+
+    /*const user = await UserDatabase.getUser(sender);
+    if (!user) return res.status(404).send('user not found!');
+    if (
+      user.username != payload.username ||
+      user.password != payload.password ||
+      user.routerIp != payload.routerIp
+    ) return res.status(401).send('invalid user authentication payload!');
+
+
+    const txNonce = await SystemDatabase.getCurrentTxNonce();
+    contract.approveGateway(payloadHash, payload.routerIp, isp, txNonce);
+    await SystemDatabase.incrementTxNonce();*/
+
+    return res.status(200).send('authorization attempt successful!');
   }
 }
 

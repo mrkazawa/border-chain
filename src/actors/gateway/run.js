@@ -75,6 +75,10 @@ async function runWorkers() {
       Processor.processDeviceAuthentication(req, res, contract, gateway);
     });
 
+    app.post('/authorize', async (req, res) => {
+      Processor.processServiceAuthorization(req, res, contract, gateway);
+    });
+
     app.listen(HTTP_PORT, () => {
       log(`Running ${process.pid}: hit me up on ${HOSTNAME}.local:${HTTP_PORT}`);
     });

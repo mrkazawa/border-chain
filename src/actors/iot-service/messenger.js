@@ -10,6 +10,13 @@ const {
 } = require('./config');
 
 class Messenger {
+  static async sendAuthorizationPayloadToGateway(encryptedPayload) {
+    const data = {
+      payload: encryptedPayload
+    };
+    return await HttpUtil.post(GATEWAY_AUTHZ_URL, data);
+  }
+
   static async seedEtherToService(serviceAddress) {
     const url = ADMIN_SEED_ETHER_URL + '/?address=' + serviceAddress;
     return await HttpUtil.get(url);
