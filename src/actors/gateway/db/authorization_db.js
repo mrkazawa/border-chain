@@ -10,7 +10,9 @@ class AuthorizationDatabase {
         approver: approver,
         isStored: true,
         isApproved: false,
-        isRevoked: false
+        isRevoked: false,
+        expiryTime: 0,
+        accesses: []
       }
 
       await db.set(payloadHash, payload);
@@ -20,20 +22,33 @@ class AuthorizationDatabase {
     }
   }
 
-  static async updatePayloadStateToApproved(payloadHash, approver, device) {
+  static async updatePayloadStateToApproved(payloadHash, approver, expiryTime) {
     try {
       const storedPayload = await db.get(payloadHash);
-
       if (!storedPayload) throw new Error('payload hash does not exist!');
-      if (storedPayload.deviceAddress != device) throw new Error('payload hash and device does not match!');
+      if (storedPayload.approver != approver) throw new Error('payload hash and approver does not match!');
 
-      storedPayload.approverAddress = approver;
       storedPayload.isApproved = true;
+      storedPayload.expiryTime = expiryTime;
 
       await db.replace(payloadHash, storedPayload);
 
     } catch (err) {
       throw new Error(`error when updating payload state to approved! ${err}`);
+    }
+  }
+
+  static async setAccesses(payloadHash, accesses) {
+    try {
+      const storedPayload = await db.get(payloadHash);
+      if (!storedPayload) throw new Error('payload hash does not exist!');
+
+      storedPayload.accesses = accesses;
+
+      await db.replace(payloadHash, storedPayload);
+
+    } catch (err) {
+      throw new Error(`error when setting accesses to payload! ${err}`);
     }
   }
 
@@ -47,12 +62,6 @@ class AuthorizationDatabase {
     } catch (err) {
       throw new Error(`error when getting payload! ${err}`);
     }
-  }
-
-  static async doesPayloadExist(payloadHash) {
-    const storedPayload = await db.get(payloadHash);
-    if (!storedPayload) return false;
-    return true;
   }
 
   static async isPayloadApproved(payloadHash) {

@@ -5,6 +5,10 @@ const isBenchmarkingGateway = () => {
   return (process.env.STRESS_GATEWAY == "true");
 };
 
+const isBenchmarking = () => {
+  return (process.env.BENCHMARKING == "true");
+};
+
 const EthereumUtil = require('../utils/ethereum-util');
 const CryptoUtil = require('../utils/crypto-util');
 const Processor = require('./processor');
@@ -37,11 +41,11 @@ class Contract {
       const approver = event.returnValues['approver'];
 
       if (sender == gateway.address) {
-        log(chalk.yellow(`Contract event: ${payloadHash} authentication payload is stored`));
+        log(chalk.yellow(`Contract event: ${payloadHash} device authentication payload is stored`));
         Processor.processAuthenticationPayloadAddedEvent(payloadHash, target, gateway);
       
       } else if (approver == gateway.address) {
-        log(chalk.yellow(`Contract event: ${payloadHash} authorization payload is stored`));
+        log(chalk.yellow(`Contract event: ${payloadHash} access authorization payload is stored`));
         Processor.processAuthorizationPayloadAddedEvent(payloadHash, sender, target, approver);
       }
     });
@@ -59,9 +63,25 @@ class Contract {
       const device = event.returnValues['device'];
 
       if (gateway == ourGateway.address) {
-        log(chalk.yellow(`Contract event: ${payloadHash} payload is approved`));
-
+        log(chalk.yellow(`Contract event: ${payloadHash} device authentication payload is approved`));
         Processor.processDeviceApprovedEvent(payloadHash, sender, device);
+      }
+    });
+  }
+
+  addAccessApprovedEventListener(gateway) {
+    this.contract.events.AccessApproved({
+      fromBlock: 0
+    }, function (error, event) {
+      if (error) log(chalk.red(error));
+
+      const payloadHash = event.returnValues['payloadHash'];
+      const approver = event.returnValues['sender'];
+      const expiryTime = event.returnValues['expiryTime'];
+
+      if (approver == gateway.address) {
+        log(chalk.yellow(`Contract event: ${payloadHash} access authorization payload is approved`));
+        Processor.processAccessApprovedEvent(payloadHash, approver, expiryTime);
       }
     });
   }
@@ -79,6 +99,21 @@ class Contract {
   
     const signedTx = CryptoUtil.signTransaction(gateway.privateKey, storeAuthTx);
     if (!isBenchmarkingGateway()) EthereumUtil.sendTransaction(signedTx);
+  }
+
+  approveAccess(payloadHash, expiryIn, gateway, txNonce) {
+    const approveAuth = this.contract.methods.approveAccess(payloadHash, expiryIn).encodeABI();
+    const approveAuthTx = {
+      from: gateway.address,
+      to: this.contractAddress,
+      nonce: txNonce,
+      gasLimit: 5000000,
+      gasPrice: 5000000000,
+      data: approveAuth
+    };
+  
+    const signedTx = CryptoUtil.signTransaction(gateway.privateKey, approveAuthTx);
+    if (!isBenchmarking()) EthereumUtil.sendTransaction(signedTx);
   }
 }
 

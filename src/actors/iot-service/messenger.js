@@ -26,8 +26,11 @@ class Messenger {
     return await HttpUtil.get(ADMIN_ABI_URL);
   }
 
-  static async getAccessList() {
-    return await HttpUtil.get(GATEWAY_ACCESS_LIST_URL);
+  static async getAccessList(address) {
+    const data = {
+      address: address
+    };
+    return await HttpUtil.post(GATEWAY_ACCESS_LIST_URL, data);
   }
 
   static async getGatewayInfo() {

@@ -36,6 +36,7 @@ async function runMaster() {
     const contract = new Contract(abi);
     contract.addPayloadAddedEventListener(gateway);
     contract.addDeviceApprovedEventListener(gateway);
+    contract.addAccessApprovedEventListener(gateway);
   }
 }
 
@@ -67,8 +68,8 @@ async function runWorkers() {
     const app = express();
     app.use(bodyParser.json());
 
-    app.get('/accesses', async (req, res) => {
-      Processor.processAccessList(req, res, gateway);
+    app.post('/accesses', async (req, res) => {
+      Processor.assignAccess(req, res, gateway);
     });
 
     app.post('/authenticate', async (req, res) => {

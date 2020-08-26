@@ -11,8 +11,10 @@ const isBenchmarkingVendor = () => {
 const CryptoUtil = require('../utils/crypto-util');
 const BenchUtil = require('../utils/bench-util');
 const Messenger = require('./messenger');
+
 const PayloadDatabase = require('./db/payload_db');
 const AuthorizationDatabase = require('./db/authorization_db');
+const AccessDatabase = require('./db/access_db');
 const SystemDatabase = require('./db/system_db');
 
 const {
@@ -28,14 +30,19 @@ class Processor {
     }
   }
 
+  static async processDeviceApprovedEvent(payloadHash, sender, device) {
+    if (await PayloadDatabase.isPayloadApproved(payloadHash)) log(chalk.yellow(`do nothing, we have already processed ${payloadHash} before`));
+    else await PayloadDatabase.updatePayloadStateToApproved(payloadHash, sender, device);
+  }
+
   static async processAuthorizationPayloadAddedEvent(payloadHash, sender, target, approver) {
     if (await AuthorizationDatabase.isPayloadApproved(payloadHash)) log(chalk.yellow(`do nothing, we have already processed ${payloadHash} before`));
     else await AuthorizationDatabase.storeNewPayload(payloadHash, sender, target, approver);
   }
 
-  static async processDeviceApprovedEvent(payloadHash, sender, device) {
-    if (await PayloadDatabase.isPayloadApproved(payloadHash)) log(chalk.yellow(`do nothing, we have already processed ${payloadHash} before`));
-    else await PayloadDatabase.updatePayloadStateToApproved(payloadHash, sender, device);
+  static async processAccessApprovedEvent(payloadHash, approver, expiryTime) {
+    if (await AuthorizationDatabase.isPayloadApproved(payloadHash)) log(chalk.yellow(`do nothing, we have already processed ${payloadHash} before`));
+    else await AuthorizationDatabase.updatePayloadStateToApproved(payloadHash, approver, expiryTime);
   }
 
   static async prepareAndSendToVendor(payloadHash, gateway) {
@@ -102,12 +109,17 @@ class Processor {
     return res.status(200).send('payload received, forwarding to vendor!');
   }
 
-  static async processAccessList(req, res, gateway) {
+  static async assignAccess(req, res, gateway) {
+    if (req.body.constructor === Object && Object.keys(req.body).length === 0) return res.status(401).send('your request does not have body!');
+
+    const address = req.body.address;
     const accesses = [
       'resource1',
       'resource2',
       'resource3'
-    ]; // mock of list of accesses
+    ]; // mock of list of accesses for the given address
+
+    await AccessDatabase.storeNewAccess(address, accesses);
 
     const accessesSignature = CryptoUtil.signPayload(gateway.privateKey, accesses);
     const responses = {
@@ -138,20 +150,22 @@ class Processor {
     const isValid = CryptoUtil.verifyPayload(payloadSignature, payload, sender);
     if (!isValid) return res.status(401).send('invalid signature!');
 
+    const storedAccesses = await AccessDatabase.getAccess(sender);
+    if (!storedAccesses) return res.status(404).send('accesses for this address is not found!');
 
-
-    /*const user = await UserDatabase.getUser(sender);
-    if (!user) return res.status(404).send('user not found!');
-    if (
-      user.username != payload.username ||
-      user.password != payload.password ||
-      user.routerIp != payload.routerIp
-    ) return res.status(401).send('invalid user authentication payload!');
-
+    const accesses = payload.accesses;
+    const accessesLength = accesses.length;
+    for (let i = 0; i < accessesLength; i ++) {
+      if (!storedAccesses.includes(accesses[i])) {
+        return res.status(401).send('invalid access authorization payload!');
+      }
+    }
+    await AuthorizationDatabase.setAccesses(payloadHash, accesses);
 
     const txNonce = await SystemDatabase.getCurrentTxNonce();
-    contract.approveGateway(payloadHash, payload.routerIp, isp, txNonce);
-    await SystemDatabase.incrementTxNonce();*/
+    const expiredIn = 3600;
+    contract.approveAccess(payloadHash, expiredIn, gateway, txNonce);
+    await SystemDatabase.incrementTxNonce();
 
     return res.status(200).send('authorization attempt successful!');
   }

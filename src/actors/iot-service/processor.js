@@ -23,6 +23,13 @@ class Processor {
     }
   }
 
+  static async processAccessApprovedEvent(payloadHash, approver, expiryTime) {
+    if (await PayloadDatabase.isPayloadApproved(payloadHash)) log(chalk.yellow(`do nothing, we have already processed ${payloadHash} before`));
+    else {
+      await PayloadDatabase.updatePayloadStateToApproved(payloadHash, approver, expiryTime);
+    }
+  }
+
   static async prepareAndSendToGateway(service, auth, gateway) {
     const payloadSignature = CryptoUtil.signPayload(service.privateKey, auth);
     const payloadForGateway = {

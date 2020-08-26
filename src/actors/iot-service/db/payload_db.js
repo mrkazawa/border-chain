@@ -2,15 +2,24 @@ const Database = require('./db');
 const db = new Database();
 
 class PayloadDatabase {
+  /**
+   * Store new authroization payload in memcached.
+   * 
+   * @param {string} payloadHash The string of the authorization payload hash
+   * @param {string} sender The address of the sender
+   * @param {string} target The address of the target
+   * @param {string} approver The address of the approver
+   */
   static async storeNewPayload(payloadHash, sender, target, approver) {
     try {
       const payload = {
         sender: sender,
         target: target,
         approver: approver,
-        isStored: false,
-        isApproved: false,
-        isRevoked: false
+        isStored: false, // true when stored in smart contract
+        isApproved: false, // true when approved by gateway
+        isRevoked: false, // true when revoked by service
+        expiryTime: 0 // expiry time of this access in block number
       }
 
       await db.set(payloadHash, payload);
@@ -34,7 +43,7 @@ class PayloadDatabase {
     }
   }
 
-  static async updatePayloadStateToApproved(payloadHash, approver) {
+  static async updatePayloadStateToApproved(payloadHash, approver, expiryTime) {
     try {
       const storedPayload = await db.get(payloadHash);
 
@@ -42,6 +51,7 @@ class PayloadDatabase {
       if (storedPayload.approver != approver) throw new Error('payload hash and approver does not match!');
 
       storedPayload.isApproved = true;
+      storedPayload.expiryTime = expiryTime;
 
       await db.replace(payloadHash, storedPayload);
 
