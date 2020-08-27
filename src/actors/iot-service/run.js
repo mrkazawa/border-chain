@@ -20,16 +20,13 @@ async function main() {
 
   log('retireved access:', accesses);
 
-  // TODO: Check if gateway and device has been authenticated or not
-  // before moving further to request authorization
-
   const chosenAccesses = accesses.slice(0, 2); // we choose the first two accesses
   const auth = constructAuthorizationPayload(chosenAccesses);
   const authHash = CryptoUtil.hashPayload(auth);
 
   const contract = new Contract(abi);
   contract.addPayloadAddedEventListener(SERVICE, auth, gateway);
-  contract.addAccessApprovedEventListener(SERVICE);
+  contract.addAccessApprovedEventListener(SERVICE, gateway);
   contract.storePayload(authHash, gateway.address, SERVICE);
 
   PayloadDatabase.storeNewPayload(authHash, SERVICE.address, SERVICE.address, gateway.address);

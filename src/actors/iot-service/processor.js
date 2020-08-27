@@ -23,10 +23,11 @@ class Processor {
     }
   }
 
-  static async processAccessApprovedEvent(payloadHash, approver, expiryTime) {
+  static async processAccessApprovedEvent(payloadHash, approver, expiryTime, service, gateway) {
     if (await PayloadDatabase.isPayloadApproved(payloadHash)) log(chalk.yellow(`do nothing, we have already processed ${payloadHash} before`));
     else {
       await PayloadDatabase.updatePayloadStateToApproved(payloadHash, approver, expiryTime);
+      await Processor.initiateHandshake(payloadHash, service, gateway);
     }
   }
 
@@ -58,6 +59,36 @@ class Processor {
     const instance = BenchUtil.createPostAutoCannonInstance(title, url, body, connections, overallRate, amount);
 
     BenchUtil.runBenchmark(instance);
+  }
+
+  static async initiateHandshake(payloadHash, service, gateway) {
+    const exchange = {
+      token: payloadHash,
+      publicKey: service.publicKey,
+      timestamp: Date.now(),
+      nonce: CryptoUtil.randomValueBase64(64),
+      secret: CryptoUtil.randomValueBase64(128)
+    };
+
+    const exchangeSignature = CryptoUtil.signPayload(service.privateKey, exchange);
+    const payloadForGateway = {
+      payload: exchange,
+      payloadSignature: exchangeSignature
+    };
+    const offChainPayload = await CryptoUtil.encryptPayload(gateway.publicKey, payloadForGateway);
+
+    const response = await Messenger.sendHandshakePayloadToGateway(offChainPayload);
+    const responseDecrypted = await CryptoUtil.decryptPayload(service.privateKey, response);
+    const responsePayload = responseDecrypted.payload;
+    const responseSignature = responseDecrypted.payloadSignature;
+
+    if (exchange.nonce != responsePayload.nonce) throw new Error('exchange error: invalid nonce from gateway');
+
+    const isValid = CryptoUtil.verifyPayload(responseSignature, responsePayload, gateway.address);
+    if (!isValid) throw new Error('exchange error: invalid signature from gateway');
+
+    const secretKey = exchange.secret + responsePayload.secret;
+    log(chalk.greenBright(secretKey));
   }
 }
 

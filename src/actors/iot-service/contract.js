@@ -38,20 +38,20 @@ class Contract {
     });
   }
 
-  addAccessApprovedEventListener(service) {
+  addAccessApprovedEventListener(service, gateway) {
     this.contract.events.AccessApproved({
       fromBlock: 0
     }, function (error, event) {
       if (error) log(chalk.red(error));
 
       const payloadHash = event.returnValues['payloadHash'];
-      const sender = event.returnValues['sender'];
+      const approver = event.returnValues['sender'];
       const target = event.returnValues['target'];
       const expiryTime = event.returnValues['expiryTime'];
 
       if (target == service.address) {
         log(chalk.yellow(`Contract event: ${payloadHash} access authorization payload is approved`));
-        Processor.processAccessApprovedEvent(payloadHash, sender, expiryTime);
+        Processor.processAccessApprovedEvent(payloadHash, approver, expiryTime, service, gateway);
       }
     });
   }

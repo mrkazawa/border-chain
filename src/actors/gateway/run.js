@@ -80,6 +80,14 @@ async function runWorkers() {
       Processor.processServiceAuthorization(req, res, contract, gateway);
     });
 
+    app.post('/handshake', async (req, res) => {
+      Processor.processHandshake(req, res, gateway);
+    });
+
+    app.post('/resource', async (req, res) => {
+      Processor.processResource(req, res, contract, gateway);
+    });
+
     app.listen(HTTP_PORT, () => {
       log(`Running ${process.pid}: hit me up on ${HOSTNAME}.local:${HTTP_PORT}`);
     });

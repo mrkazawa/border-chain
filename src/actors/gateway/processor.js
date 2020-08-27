@@ -15,6 +15,7 @@ const Messenger = require('./messenger');
 const PayloadDatabase = require('./db/payload_db');
 const AuthorizationDatabase = require('./db/authorization_db');
 const AccessDatabase = require('./db/access_db');
+const NonceDatabase = require('./db/nonce_db');
 const SystemDatabase = require('./db/system_db');
 
 const {
@@ -168,6 +169,62 @@ class Processor {
     await SystemDatabase.incrementTxNonce();
 
     return res.status(200).send('authorization attempt successful!');
+  }
+
+  static async processHandshake(req, res, gateway) {
+    if (req.body.constructor === Object && Object.keys(req.body).length === 0) return res.status(401).send('your request does not have body!');
+
+    const encryptedPayload = req.body.payload;
+
+    const payloadForGateway = await CryptoUtil.decryptPayload(gateway.privateKey, encryptedPayload);
+    const payload = payloadForGateway.payload;
+    const payloadSignature = payloadForGateway.payloadSignature;
+    const payloadHash = CryptoUtil.hashPayload(payload);
+
+    if (await NonceDatabase.isExist(payloadHash)) return res.status(401).send('replay? we already process this before!');
+    else await NonceDatabase.storeNewNonce(payloadHash);
+
+    const token = payload.token;
+    const storedPayload = await AuthorizationDatabase.getPayload(token);
+    const sender = storedPayload.sender;
+    const isApproved = storedPayload.isApproved;
+    const isRevoked = storedPayload.isRevoked;
+    const expiryTime = storedPayload.expiryTime;
+
+    if (
+      !storedPayload ||
+      !isApproved ||
+      isRevoked ||
+      (expiryTime * 1000 < Date.now())
+    ) return res.status(404).send('invalid token!');
+
+    const isValid = CryptoUtil.verifyPayload(payloadSignature, payload, sender);
+    if (!isValid) return res.status(401).send('invalid signature!');
+
+    const nonce = payload.nonce;
+    const servicePublicKey = payload.publicKey;
+    console.log('public key: ', servicePublicKey);
+
+    const exchange = {
+      timestamp: Date.now(),
+      nonce: nonce,
+      secret: CryptoUtil.randomValueBase64(128)
+    };
+
+    const exchangeSignature = CryptoUtil.signPayload(gateway.privateKey, exchange);
+    const payloadForService = {
+      payload: exchange,
+      payloadSignature: exchangeSignature
+    };
+    const response = await CryptoUtil.encryptPayload(servicePublicKey, payloadForService);
+
+    const secretKey = payload.secret + exchange.secret;
+    log(chalk.greenBright(secretKey));
+
+    return res.status(200).send(response);
+  }
+
+  static async processResource(req, res, contract, gateway) {
   }
 }
 

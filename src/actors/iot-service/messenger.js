@@ -6,15 +6,30 @@ const {
   ADMIN_GATEWAY_INFO_URL,
   GATEWAY_ACCESS_LIST_URL,
   GATEWAY_AUTHZ_URL,
+  GATEWAY_HANDSHAKE_URL,
   GATEWAY_RESOURCE_URL
 } = require('./config');
 
 class Messenger {
-  static async sendAuthorizationPayloadToGateway(encryptedPayload) {
+  static async sendAuthorizationPayloadToGateway(payload) {
     const data = {
-      payload: encryptedPayload
+      payload: payload
     };
     return await HttpUtil.post(GATEWAY_AUTHZ_URL, data);
+  }
+
+  static async sendHandshakePayloadToGateway(payload) {
+    const data = {
+      payload: payload
+    };
+    return await HttpUtil.post(GATEWAY_HANDSHAKE_URL, data);
+  }
+
+  static async sendResourcePayloadToGateway(payload) {
+    const data = {
+      payload: payload
+    };
+    return await HttpUtil.post(GATEWAY_RESOURCE_URL, data);
   }
 
   static async seedEtherToService(serviceAddress) {
@@ -26,9 +41,9 @@ class Messenger {
     return await HttpUtil.get(ADMIN_ABI_URL);
   }
 
-  static async getAccessList(address) {
+  static async getAccessList(serviceAddress) {
     const data = {
-      address: address
+      address: serviceAddress
     };
     return await HttpUtil.post(GATEWAY_ACCESS_LIST_URL, data);
   }
