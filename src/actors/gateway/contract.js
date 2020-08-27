@@ -5,8 +5,8 @@ const isBenchmarkingGateway = () => {
   return (process.env.STRESS_GATEWAY == "true");
 };
 
-const isBenchmarking = () => {
-  return (process.env.BENCHMARKING == "true");
+const isBenchmarkingAccess = () => {
+  return (process.env.BENCHMARKING_ACCESS == "true");
 };
 
 const EthereumUtil = require('../utils/ethereum-util');
@@ -113,7 +113,7 @@ class Contract {
     };
   
     const signedTx = CryptoUtil.signTransaction(gateway.privateKey, approveAuthTx);
-    if (!isBenchmarking()) EthereumUtil.sendTransaction(signedTx);
+    if (!isBenchmarkingAccess()) EthereumUtil.sendTransaction(signedTx);
   }
 }
 

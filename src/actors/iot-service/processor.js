@@ -1,8 +1,12 @@
 const chalk = require('chalk');
 const log = console.log;
 
-const isBenchmarking = () => {
-  return (process.env.BENCHMARKING == "true");
+const isBenchmarkingAccess = () => {
+  return (process.env.BENCHMARKING_ACCESS == "true");
+};
+
+const isBenchmarkingHandshake = () => {
+  return (process.env.BENCHMARKING_HANDSHAKE == "true");
 };
 
 const CryptoUtil = require('../utils/crypto-util');
@@ -11,7 +15,8 @@ const Messenger = require('./messenger');
 const PayloadDatabase = require('./db/payload_db');
 
 const {
-  GATEWAY_AUTHZ_URL
+  GATEWAY_AUTHZ_URL,
+  GATEWAY_HANDSHAKE_URL
 } = require('./config');
 
 class Processor {
@@ -38,15 +43,15 @@ class Processor {
       payloadSignature: payloadSignature
     };
     const offChainPayload = await CryptoUtil.encryptPayload(gateway.publicKey, payloadForGateway);
-  
-    if (isBenchmarking()) Processor.benchmark(offChainPayload);
+
+    if (isBenchmarkingAccess()) Processor.benchmarkAccess(offChainPayload);
     else {
       const result = await Messenger.sendAuthorizationPayloadToGateway(offChainPayload);
       log(chalk.greenBright(result));
     }
   }
 
-  static benchmark(payload) {
+  static benchmarkAccess(payload) {
     const title = 'Stress the Gateway Authorization Server';
     const url = GATEWAY_AUTHZ_URL;
     const body = {
@@ -75,20 +80,38 @@ class Processor {
       payload: exchange,
       payloadSignature: exchangeSignature
     };
-    const offChainPayload = await CryptoUtil.encryptPayload(gateway.publicKey, payloadForGateway);
+    const request = await CryptoUtil.encryptPayload(gateway.publicKey, payloadForGateway);
 
-    const response = await Messenger.sendHandshakePayloadToGateway(offChainPayload);
-    const responseDecrypted = await CryptoUtil.decryptPayload(service.privateKey, response);
-    const responsePayload = responseDecrypted.payload;
-    const responseSignature = responseDecrypted.payloadSignature;
+    if (isBenchmarkingHandshake()) Processor.benchmarkHandshake(request);
+    else {
+      const response = await Messenger.sendHandshakePayloadToGateway(request);
+      const responseDecrypted = await CryptoUtil.decryptPayload(service.privateKey, response);
+      const responsePayload = responseDecrypted.payload;
+      const responseSignature = responseDecrypted.payloadSignature;
 
-    if (exchange.nonce != responsePayload.nonce) throw new Error('exchange error: invalid nonce from gateway');
+      if (exchange.nonce != responsePayload.nonce) throw new Error('exchange error: invalid nonce from gateway');
 
-    const isValid = CryptoUtil.verifyPayload(responseSignature, responsePayload, gateway.address);
-    if (!isValid) throw new Error('exchange error: invalid signature from gateway');
+      const isValid = CryptoUtil.verifyPayload(responseSignature, responsePayload, gateway.address);
+      if (!isValid) throw new Error('exchange error: invalid signature from gateway');
 
-    const secretKey = exchange.secret + responsePayload.secret;
-    log(chalk.greenBright(secretKey));
+      const secretKey = exchange.secret + responsePayload.secret;
+      log(chalk.greenBright(secretKey));
+    }
+  }
+
+  static benchmarkHandshake(payload) {
+    const title = 'Stress the Gateway Handshake Server';
+    const url = GATEWAY_HANDSHAKE_URL;
+    const body = {
+      payload: payload
+    };
+    const connections = 500;
+    const overallRate = 0;
+    const amount = 100000;
+
+    const instance = BenchUtil.createPostAutoCannonInstance(title, url, body, connections, overallRate, amount);
+
+    BenchUtil.runBenchmark(instance);
   }
 }
 

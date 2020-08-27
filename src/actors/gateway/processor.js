@@ -156,7 +156,7 @@ class Processor {
 
     const accesses = payload.accesses;
     const accessesLength = accesses.length;
-    for (let i = 0; i < accessesLength; i ++) {
+    for (let i = 0; i < accessesLength; i++) {
       if (!storedAccesses.includes(accesses[i])) {
         return res.status(401).send('invalid access authorization payload!');
       }
@@ -203,7 +203,6 @@ class Processor {
 
     const nonce = payload.nonce;
     const servicePublicKey = payload.publicKey;
-    console.log('public key: ', servicePublicKey);
 
     const exchange = {
       timestamp: Date.now(),
@@ -219,13 +218,11 @@ class Processor {
     const response = await CryptoUtil.encryptPayload(servicePublicKey, payloadForService);
 
     const secretKey = payload.secret + exchange.secret;
-    log(chalk.greenBright(secretKey));
 
     return res.status(200).send(response);
   }
 
-  static async processResource(req, res, contract, gateway) {
-  }
+  static async processResource(req, res, contract, gateway) {}
 }
 
 module.exports = Processor;
