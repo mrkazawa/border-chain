@@ -16,7 +16,8 @@ const PayloadDatabase = require('./db/payload_db');
 
 const {
   GATEWAY_AUTHZ_URL,
-  GATEWAY_HANDSHAKE_URL
+  GATEWAY_HANDSHAKE_URL,
+  GATEWAY_RESOURCE_URL
 } = require('./config');
 
 class Processor {
@@ -95,13 +96,46 @@ class Processor {
       if (!isValid) throw new Error('exchange error: invalid signature from gateway');
 
       const secretKey = exchange.secret + responsePayload.secret;
-      log(chalk.greenBright(secretKey));
+      log('secret key: ', chalk.greenBright(secretKey));
+
+      //Processor.requestForResource(payloadHash, secretKey);
+    }
+  }
+
+  static async requestForResource(payloadHash, secretKey) {
+    const request = {
+      token: payloadHash,
+      deviceAddress: 'deviceAddress',
+      type: 'temperature',
+      method: 'get'
+    };
+
+    const encryptedRequest = CryptoUtil.encryptSymmetrically(secretKey, request);
+    if (isBenchmarkingResource()) Processor.benchmarkResource(encryptedRequest);
+    else {
+      const response = await Messenger.sendResourcePayloadToGateway(encryptedRequest);
+      log(chalk.greenBright(response));
     }
   }
 
   static benchmarkHandshake(payload) {
     const title = 'Stress the Gateway Handshake Server';
     const url = GATEWAY_HANDSHAKE_URL;
+    const body = {
+      payload: payload
+    };
+    const connections = 500;
+    const overallRate = 0;
+    const amount = 100000;
+
+    const instance = BenchUtil.createPostAutoCannonInstance(title, url, body, connections, overallRate, amount);
+
+    BenchUtil.runBenchmark(instance);
+  }
+
+  static benchmarkResource(payload) {
+    const title = 'Stress the Gateway Resource Server';
+    const url = GATEWAY_RESOURCE_URL;
     const body = {
       payload: payload
     };

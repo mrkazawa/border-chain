@@ -7,19 +7,19 @@ class AccessDatabase {
       await db.set(address, accesses);
 
     } catch (err) {
-      throw new Error(`error when storing new accesses for this address! ${err}`);
+      throw new Error(`access db: error when storing new accesses ${err}`);
     }
   }
 
   static async getAccess(address) {
     try {
-      const storedAccess = await db.get(address);
-      if (!storedAccess) throw new Error('this address does not exist!');
+      const value = await db.get(address);
+      if (!value) throw new Error('access db: not found');
 
-      return storedAccess;
+      return value;
 
     } catch (err) {
-      throw new Error(`error when getting access! ${err}`);
+      throw new Error(`access db: error when getting access ${err}`);
     }
   }
 }

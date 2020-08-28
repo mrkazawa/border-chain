@@ -85,7 +85,7 @@ async function runWorkers() {
     });
 
     app.post('/resource', async (req, res) => {
-      Processor.processResource(req, res, contract, gateway);
+      Processor.processResource(req, res, gateway);
     });
 
     app.listen(HTTP_PORT, () => {

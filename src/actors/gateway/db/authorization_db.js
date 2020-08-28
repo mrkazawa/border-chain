@@ -13,7 +13,7 @@ class AuthorizationDatabase {
         isRevoked: false,
         expiryTime: 0,
         accesses: []
-      }
+      };
 
       await db.set(payloadHash, payload);
 

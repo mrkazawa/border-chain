@@ -179,12 +179,14 @@ class Processor {
     const payloadForGateway = await CryptoUtil.decryptPayload(gateway.privateKey, encryptedPayload);
     const payload = payloadForGateway.payload;
     const payloadSignature = payloadForGateway.payloadSignature;
-    const payloadHash = CryptoUtil.hashPayload(payload);
-
-    if (await NonceDatabase.isExist(payloadHash)) return res.status(401).send('replay? we already process this before!');
-    else await NonceDatabase.storeNewNonce(payloadHash);
 
     const token = payload.token;
+    const nonce = payload.nonce;
+    const servicePublicKey = payload.publicKey;
+
+    if (await NonceDatabase.isExist(nonce)) return res.status(401).send('replay? we already process this before!');
+    else await NonceDatabase.storeNewNonce(nonce);
+
     const storedPayload = await AuthorizationDatabase.getPayload(token);
     const sender = storedPayload.sender;
     const isApproved = storedPayload.isApproved;
@@ -201,9 +203,6 @@ class Processor {
     const isValid = CryptoUtil.verifyPayload(payloadSignature, payload, sender);
     if (!isValid) return res.status(401).send('invalid signature!');
 
-    const nonce = payload.nonce;
-    const servicePublicKey = payload.publicKey;
-
     const exchange = {
       timestamp: Date.now(),
       nonce: nonce,
@@ -218,11 +217,19 @@ class Processor {
     const response = await CryptoUtil.encryptPayload(servicePublicKey, payloadForService);
 
     const secretKey = payload.secret + exchange.secret;
+    await NonceDatabase.updateSecret(nonce, secretKey);  
 
     return res.status(200).send(response);
   }
 
-  static async processResource(req, res, contract, gateway) {}
+  static async processResource(req, res, gateway) {
+    if (req.body.constructor === Object && Object.keys(req.body).length === 0) return res.status(401).send('your request does not have body!');
+
+    const encryptedPayload = req.body.payload;
+
+
+    const payloadForGateway = await CryptoUtil.decryptSymmetrically(gateway.privateKey, encryptedPayload);
+  }
 }
 
 module.exports = Processor;
