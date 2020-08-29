@@ -25,6 +25,7 @@
     "service": "node actors/iot-service/run",
     "service-benchmark-access": "BENCHMARKING_ACCESS=true node actors/iot-service/run",
     "service-benchmark-handshake": "BENCHMARKING_HANDSHAKE=true node actors/iot-service/run",
+    "service-benchmark-resource": "BENCHMARKING_RESOURCE=true node actors/iot-service/run",
     "vendor": "node actors/vendor/run",
     "vendor-benchmark": "BENCHMARKING=true node actors/vendor/run",
     "test": "jest && truffle test"

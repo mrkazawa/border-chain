@@ -222,13 +222,39 @@ class Processor {
     return res.status(200).send(response);
   }
 
-  static async processResource(req, res, gateway) {
+  static async processResource(req, res) {
     if (req.body.constructor === Object && Object.keys(req.body).length === 0) return res.status(401).send('your request does not have body!');
 
-    const encryptedPayload = req.body.payload;
+    const retrievedPayload = req.body.payload;
+    const nonce = retrievedPayload.nonce;
+    const encryptedRequest = retrievedPayload.request;
 
+    const secretKey = await NonceDatabase.getSecret(nonce);
+    if (!secretKey) res.status(401).send('invalid nonce!');
 
-    const payloadForGateway = await CryptoUtil.decryptSymmetrically(gateway.privateKey, encryptedPayload);
+    const request = await CryptoUtil.decryptSymmetrically(secretKey, encryptedRequest);
+    const token = request.token;
+    if (!token) res.status(401).send('invalid request!');
+
+    const storedPayload = await AuthorizationDatabase.getPayload(token);
+    const isApproved = storedPayload.isApproved;
+    const isRevoked = storedPayload.isRevoked;
+    const expiryTime = storedPayload.expiryTime;
+
+    if (
+      !storedPayload ||
+      !isApproved ||
+      isRevoked ||
+      (expiryTime * 1000 < Date.now())
+    ) return res.status(401).send('invalid token!');
+
+    const response = {
+      deviceAddress: 'deviceAddress',
+      temperature: 25
+    };
+    const encryptedResponse = CryptoUtil.encryptSymmetrically(secretKey, response);
+
+    return res.status(200).send(encryptedResponse);
   }
 }
 

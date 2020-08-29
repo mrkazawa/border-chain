@@ -9,6 +9,10 @@ const isBenchmarkingHandshake = () => {
   return (process.env.BENCHMARKING_HANDSHAKE == "true");
 };
 
+const isBenchmarkingResource = () => {
+  return (process.env.BENCHMARKING_RESOURCE == "true");
+};
+
 const CryptoUtil = require('../utils/crypto-util');
 const BenchUtil = require('../utils/bench-util');
 const Messenger = require('./messenger');
@@ -98,11 +102,11 @@ class Processor {
       const secretKey = exchange.secret + responsePayload.secret;
       log('secret key: ', chalk.greenBright(secretKey));
 
-      //Processor.requestForResource(payloadHash, secretKey);
+      Processor.requestForResource(payloadHash, exchange.nonce, secretKey);
     }
   }
 
-  static async requestForResource(payloadHash, secretKey) {
+  static async requestForResource(payloadHash, nonce, secretKey) {
     const request = {
       token: payloadHash,
       deviceAddress: 'deviceAddress',
@@ -111,10 +115,16 @@ class Processor {
     };
 
     const encryptedRequest = CryptoUtil.encryptSymmetrically(secretKey, request);
-    if (isBenchmarkingResource()) Processor.benchmarkResource(encryptedRequest);
+
+    const payloadForGateway = {
+      nonce: nonce,
+      request: encryptedRequest
+    };
+
+    if (isBenchmarkingResource()) Processor.benchmarkResource(payloadForGateway);
     else {
-      const response = await Messenger.sendResourcePayloadToGateway(encryptedRequest);
-      log(chalk.greenBright(response));
+      const response = await Messenger.sendResourcePayloadToGateway(payloadForGateway);
+      log('response: ', chalk.greenBright(response));
     }
   }
 

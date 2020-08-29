@@ -4,7 +4,7 @@ const db = new Database();
 class NonceDatabase {
   static async storeNewNonce(nonce) {
     try {
-      await db.set(nonce, 'secret'); // secret string is the default
+      await db.set(nonce, 'secret'); // default value
     } catch (err) {
       throw new Error(`nonce db: error when storing new nonce! ${err}`);
     }
@@ -12,8 +12,8 @@ class NonceDatabase {
 
   static async updateSecret(nonce, secret) {
     try {
-      const storedNonce = await db.get(nonce);
-      if (!storedNonce) throw new Error('nonce db: nonce not found!');
+      const value = await db.get(nonce);
+      if (!value) throw new Error('nonce db: nonce not found!');
 
       await db.replace(nonce, secret);
 
@@ -22,10 +22,22 @@ class NonceDatabase {
     }
   }
 
+  static async getSecret(nonce) {
+    try {
+      const value = await db.get(nonce);
+      if (!value) throw new Error('nonce db: nonce not found!');
+
+      return value;
+
+    } catch (err) {
+      throw new Error(`nonce db: error when updating secret! ${err}`);
+    }
+  }
+
   static async isExist(nonce) {
     try {
-      const storedNonce = await db.get(nonce);
-      if (!storedNonce) return false;
+      const value = await db.get(nonce);
+      if (!value) return false;
       return true;
 
     } catch (err) {
