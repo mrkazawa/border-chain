@@ -52,9 +52,9 @@ async function initiateSystemSharedParameters() {
   const currentTxNonce = await EthereumUtil.getTransactionCount(gateway.address);
 
   await Promise.all([
-    SystemDatabase.initiateGatewayIdentity(gateway),
-    SystemDatabase.initiateContractAbi(abi),
-    SystemDatabase.initiateTxNonce(currentTxNonce)
+    SystemDatabase.storeGatewayIdentity(gateway),
+    SystemDatabase.storeContractAbi(abi),
+    SystemDatabase.storeTxNonce(currentTxNonce)
   ]);
 
   return [abi, gateway];

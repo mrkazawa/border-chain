@@ -1,8 +1,15 @@
-const Database = require('./db');
+const Database = require('../../utils/db');
 const db = new Database();
 
+/**
+ * System Database Class.
+ * 
+ * This class is to store system parameters.
+ * For exmaple, the Ethereum identity (private key, public key, and address),
+ * current transaction nonce, contract abi.
+ */
 class SystemDatabase {
-  static async initiateGatewayIdentity(gateway) {
+  static async storeGatewayIdentity(gateway) {
     try {
       await db.set('gateway', gateway);
     } catch (err) {
@@ -10,7 +17,7 @@ class SystemDatabase {
     }
   }
 
-  static async initiateContractAbi(contractAbi) {
+  static async storeContractAbi(contractAbi) {
     try {
       await db.set('abi', contractAbi);
     } catch (err) {
@@ -18,9 +25,9 @@ class SystemDatabase {
     }
   }
 
-  static async initiateTxNonce(currentTxNonce) {
+  static async storeTxNonce(txNonce) {
     try {
-      await db.set('txNonce', currentTxNonce);
+      await db.set('txNonce', txNonce);
     } catch (err) {
       throw new Error(`error when initiating current tx nonce! ${err}`);
     }

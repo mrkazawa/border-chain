@@ -13,7 +13,7 @@ const BenchUtil = require('../utils/bench-util');
 const Messenger = require('./messenger');
 
 const PayloadDatabase = require('./db/payload_db');
-const AuthorizationDatabase = require('./db/authorization_db');
+const TokenDatabase = require('./db/token_db');
 const AccessDatabase = require('./db/access_db');
 const NonceDatabase = require('./db/nonce_db');
 const SystemDatabase = require('./db/system_db');
@@ -37,13 +37,13 @@ class Processor {
   }
 
   static async processAuthorizationPayloadAddedEvent(payloadHash, sender, target, approver) {
-    if (await AuthorizationDatabase.isPayloadApproved(payloadHash)) log(chalk.yellow(`do nothing, we have already processed ${payloadHash} before`));
-    else await AuthorizationDatabase.storeNewPayload(payloadHash, sender, target, approver);
+    if (await TokenDatabase.isTokenApproved(payloadHash)) log(chalk.yellow(`do nothing, we have already processed ${payloadHash} before`));
+    else await TokenDatabase.storeNewToken(payloadHash, sender, target, approver);
   }
 
   static async processAccessApprovedEvent(payloadHash, approver, expiryTime) {
-    if (await AuthorizationDatabase.isPayloadApproved(payloadHash)) log(chalk.yellow(`do nothing, we have already processed ${payloadHash} before`));
-    else await AuthorizationDatabase.updatePayloadStateToApproved(payloadHash, approver, expiryTime);
+    if (await TokenDatabase.isTokenApproved(payloadHash)) log(chalk.yellow(`do nothing, we have already processed ${payloadHash} before`));
+    else await TokenDatabase.updateTokenStateToApproved(payloadHash, approver, expiryTime);
   }
 
   static async prepareAndSendToVendor(payloadHash, gateway) {
@@ -141,11 +141,11 @@ class Processor {
     const payloadSignature = payloadForGateway.payloadSignature;
     const payloadHash = CryptoUtil.hashPayload(payload);
 
-    const storedPayload = await AuthorizationDatabase.getPayload(payloadHash);
-    if (!storedPayload) return res.status(404).send('payload not found!');
+    const storedToken = await TokenDatabase.getTokenObject(payloadHash);
+    if (!storedToken) return res.status(404).send('payload not found!');
 
-    const sender = storedPayload.sender;
-    const isApproved = storedPayload.isApproved;
+    const sender = storedToken.sender;
+    const isApproved = storedToken.isApproved;
     if (isApproved) return res.status(401).send('replay? we already process this before!');
 
     const isValid = CryptoUtil.verifyPayload(payloadSignature, payload, sender);
@@ -161,7 +161,7 @@ class Processor {
         return res.status(401).send('invalid access authorization payload!');
       }
     }
-    await AuthorizationDatabase.setAccesses(payloadHash, accesses);
+    await TokenDatabase.setAccesses(payloadHash, accesses);
 
     const txNonce = await SystemDatabase.getCurrentTxNonce();
     const expiredIn = 3600;
@@ -187,14 +187,14 @@ class Processor {
     if (await NonceDatabase.isExist(nonce)) return res.status(401).send('replay? we already process this before!');
     else await NonceDatabase.storeNewNonce(nonce);
 
-    const storedPayload = await AuthorizationDatabase.getPayload(token);
-    const sender = storedPayload.sender;
-    const isApproved = storedPayload.isApproved;
-    const isRevoked = storedPayload.isRevoked;
-    const expiryTime = storedPayload.expiryTime;
+    const storedToken = await TokenDatabase.getTokenObject(token);
+    const sender = storedToken.sender;
+    const isApproved = storedToken.isApproved;
+    const isRevoked = storedToken.isRevoked;
+    const expiryTime = storedToken.expiryTime;
 
     if (
-      !storedPayload ||
+      !storedToken ||
       !isApproved ||
       isRevoked ||
       (expiryTime * 1000 < Date.now())
@@ -236,7 +236,7 @@ class Processor {
     const token = request.token;
     if (!token) res.status(401).send('invalid request!');
 
-    const storedPayload = await AuthorizationDatabase.getPayload(token);
+    const storedPayload = await TokenDatabase.getTokenObject(token);
     const isApproved = storedPayload.isApproved;
     const isRevoked = storedPayload.isRevoked;
     const expiryTime = storedPayload.expiryTime;

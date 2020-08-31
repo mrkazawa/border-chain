@@ -1,4 +1,4 @@
-const Database = require('./db');
+const Database = require('../../utils/db');
 const db = new Database();
 
 class SystemDatabase {
