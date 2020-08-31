@@ -4,7 +4,7 @@ const db = new Database();
 /**
  * Token Database Class.
  * 
- * This class is to store list of authorization payloads,
+ * This class is to store list of access authorization payloads,
  * similar to authentication payloads.
  * The payload hashes will become access tokens for IoT service.
  */

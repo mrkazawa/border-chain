@@ -1,91 +1,117 @@
 const Database = require('../../utils/db');
 const db = new Database();
 
+/**
+ * Payload Database Class.
+ * 
+ * This class is to store list of access authorization payloads.
+ * The payload hashes will become access tokens for IoT service.
+ */
 class PayloadDatabase {
   /**
-   * Store new authroization payload in memcached.
+   * Store new access authorization payload.
    * 
-   * @param {string} payloadHash The string of the authorization payload hash
-   * @param {string} sender The address of the sender
-   * @param {string} target The address of the target
-   * @param {string} approver The address of the approver
+   * @param {string} payloadHash payload hash string
+   * @param {string} sender blockchain address of authorization sender
+   * @param {string} target blockchain address of authorization target
+   * @param {string} approver blockchain address of authorization approver
    */
   static async storeNewPayload(payloadHash, sender, target, approver) {
     try {
-      const payload = {
+      const value = {
         sender: sender,
         target: target,
         approver: approver,
-        isStored: false, // true when stored in smart contract
-        isApproved: false, // true when approved by gateway
-        isRevoked: false, // true when revoked by service
-        expiryTime: 0 // expiry time of this access in block number
+        isStored: false,
+        isApproved: false,
+        isRevoked: false,
+        expiryTime: 0,
+        accesses: []
       }
 
-      await db.set(payloadHash, payload);
+      await db.set(payloadHash, value);
 
     } catch (err) {
-      throw new Error(`error when storing new payload! ${err}`);
+      throw new Error(`payload db: error when storing new payload! ${err}`);
     }
   }
 
+  /**
+   * Updating the state of payload to stored.
+   * This indicates that the payload has been stored in the blockchain.
+   * 
+   * @param {string} payloadHash payload hash string
+   */
   static async updatePayloadStateToStored(payloadHash) {
     try {
-      const storedPayload = await db.get(payloadHash);
-      if (!storedPayload) throw new Error('payload hash does not exist!');
+      const value = await db.get(payloadHash);
+      if (!value) throw new Error('payload db: payload hash does not exist!');
 
-      storedPayload.isStored = true;
+      value.isStored = true;
 
-      await db.replace(payloadHash, storedPayload);
+      await db.replace(payloadHash, value);
 
     } catch (err) {
-      throw new Error(`error when updating payload state to stored! ${err}`);
+      throw new Error(`payload db: error when updating payload state to stored! ${err}`);
     }
   }
 
+  /**
+   * Updating the payload state to approved.
+   * This indicates that the approver has validated
+   * the gateway authorization payload.
+   * 
+   * @param {string} payloadHash payload hash string
+   * @param {string} approver blockchain address of authorization approver
+   * @param {number} expiryTime expiry time in epoch UNIX time
+   */
   static async updatePayloadStateToApproved(payloadHash, approver, expiryTime) {
     try {
-      const storedPayload = await db.get(payloadHash);
+      const value = await db.get(payloadHash);
 
-      if (!storedPayload) throw new Error('payload hash does not exist!');
-      if (storedPayload.approver != approver) throw new Error('payload hash and approver does not match!');
+      if (!value) throw new Error('payload db: payload hash does not exist!');
+      if (value.approver != approver) throw new Error('payload db: payload hash and approver does not match!');
 
-      storedPayload.isApproved = true;
-      storedPayload.expiryTime = expiryTime;
+      value.isApproved = true;
+      value.expiryTime = expiryTime;
 
-      await db.replace(payloadHash, storedPayload);
+      await db.replace(payloadHash, value);
 
     } catch (err) {
-      throw new Error(`error when updating payload state to approved! ${err}`);
+      throw new Error(`payload db: error when updating payload state to approved! ${err}`);
     }
   }
 
+  /**
+   * Get details of the authorization payload.
+   * 
+   * @param {string} payloadHash payload hash string 
+   */
   static async getPayload(payloadHash) {
     try {
-      const storedPayload = await db.get(payloadHash);
-      if (!storedPayload) throw new Error('payload hash does not exist!');
+      const value = await db.get(payloadHash);
+      if (!value) throw new Error('payload db: payload hash does not exist!');
 
-      return storedPayload;
+      return value;
 
     } catch (err) {
-      throw new Error(`error when getting payload! ${err}`);
+      throw new Error(`payload db: error when getting payload! ${err}`);
     }
   }
 
-  static async doesPayloadExist(payloadHash) {
-    const storedPayload = await db.get(payloadHash);
-    if (!storedPayload) return false;
-    return true;
-  }
-
+  /**
+   * Check whether the authorization payload is already approved.
+   * 
+   * @param {string} payloadHash payload hash string
+   */
   static async isPayloadApproved(payloadHash) {
     try {
-      const storedPayload = await db.get(payloadHash);
-      if (!storedPayload || !storedPayload.isApproved) return false;
+      const value = await db.get(payloadHash);
+      if (!value || !value.isApproved) return false;
       return true;
 
     } catch (err) {
-      throw new Error(`error when checking payload approval state! ${err}`);
+      throw new Error(`payload db: error when checking payload approval state! ${err}`);
     }
   }
 }

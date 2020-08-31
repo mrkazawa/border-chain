@@ -10,7 +10,7 @@ const db = new Database();
  */
 class SystemDatabase {
   /**
-   * Store Ethereum object identities.
+   * Store Ethereum object identity of the gateway.
    * 
    * @param {object} gateway an identity object for gateway (includes private key, public key, and blockchain address)
    */
@@ -25,7 +25,7 @@ class SystemDatabase {
   /**
    * Store the ABI of the smart contract.
    * 
-   * @param {object} contractAbi the contract ABI object
+   * @param {object} contractAbi smart contract ABI object
    */
   static async storeContractAbi(contractAbi) {
     try {
@@ -38,7 +38,7 @@ class SystemDatabase {
   /**
    * Store the current transaction (tx) nonce from Ethereum.
    * 
-   * @param {number} txNonce the current tx nonce
+   * @param {number} txNonce current tx nonce
    */
   static async storeTxNonce(txNonce) {
     try {

@@ -65,10 +65,10 @@ async function initiateSystemSharedParameters() {
   let currentTxNonce = await EthereumUtil.getTransactionCount(vendor.address);
 
   await Promise.all([
-    SystemDatabase.initiateVendorIdentity(vendor),
-    SystemDatabase.initiateDeviceIdentity(deviceProperties),
-    SystemDatabase.initiateContractAbi(abi),
-    SystemDatabase.initiateTxNonce(currentTxNonce)
+    SystemDatabase.storeVendorIdentity(vendor),
+    SystemDatabase.storeDeviceIdentity(deviceProperties),
+    SystemDatabase.storeContractAbi(abi),
+    SystemDatabase.storeTxNonce(currentTxNonce)
   ]);
 
   return [abi, vendor];
