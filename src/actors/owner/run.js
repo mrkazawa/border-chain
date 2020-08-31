@@ -6,6 +6,7 @@ const CryptoUtil = require('../utils/crypto-util');
 const Contract = require('./contract');
 const Messenger = require('./messenger');
 const PayloadDatabase = require('./db/payload_db');
+const SystemDatabase = require('./db/system_db');
 
 const OWNER = CryptoUtil.createNewIdentity();
 const GATEWAY = CryptoUtil.createNewIdentity();
@@ -32,7 +33,8 @@ async function initiateSystemParameters() {
   try {
     const [assigned, abi] = await Promise.all([
       Messenger.seedEtherToOwner(OWNER.address),
-      Messenger.getContractAbi()
+      Messenger.getContractAbi(),
+      SystemDatabase.storeOwnerIdentity(OWNER)
     ]);
 
     log(chalk.yellow(assigned));

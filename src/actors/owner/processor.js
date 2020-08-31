@@ -9,6 +9,7 @@ const CryptoUtil = require('../utils/crypto-util');
 const BenchUtil = require('../utils/bench-util');
 const Messenger = require('./messenger');
 const PayloadDatabase = require('./db/payload_db');
+const SystemDatabase = require('./db/system_db');
 
 const {
   ISP_AUTHN_URL
@@ -27,6 +28,7 @@ class Processor {
     if (await PayloadDatabase.isPayloadApproved(payloadHash)) log(chalk.yellow(`do nothing, we have already processed ${payloadHash} before`));
     else {
       await PayloadDatabase.updatePayloadStateToApproved(payloadHash, approver);
+      await SystemDatabase.storeGatewayIdentity(gateway);
 
       const registered = await Messenger.registerGatewayToAdmin(gateway.address, gateway.publicKey, gateway.privateKey);
       log(chalk.yellow(registered));

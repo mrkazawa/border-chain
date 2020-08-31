@@ -6,6 +6,7 @@ const CryptoUtil = require('../utils/crypto-util');
 const Contract = require('./contract');
 const Messenger = require('./messenger');
 const PayloadDatabase = require('./db/payload_db');
+const SystemDatabase = require('./db/system_db');
 
 const SERVICE = CryptoUtil.createNewIdentity();
 
@@ -38,7 +39,8 @@ async function initiateSystemParameters() {
       Messenger.seedEtherToService(SERVICE.address),
       Messenger.getContractAbi(),
       Messenger.getGatewayInfo(),
-      Messenger.getAccessList(SERVICE.address)
+      Messenger.getAccessList(SERVICE.address),
+      SystemDatabase.storeServiceIdentity(SERVICE)
     ]);
 
     log(chalk.yellow(assigned));
