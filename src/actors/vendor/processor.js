@@ -31,7 +31,7 @@ class Processor {
 
     const authOption = payload.authOption;
     const auth = payload.auth;
-    const signature = payload.signature;
+    const deviceSignature = payload.deviceSignature;
 
     let payloadHash;
     if (
@@ -48,7 +48,7 @@ class Processor {
     const isApproved = storedPayload.isApproved;
     if (isApproved) return res.status(401).send('replay? we already process this before!');
 
-    const isOurDevice = CryptoUtil.verifyPayload(signature, target, vendor.address);
+    const isOurDevice = CryptoUtil.verifyPayload(deviceSignature, target, vendor.address);
     if (!isOurDevice) return res.status(401).send('invalid signature: not our device!');
 
     const isValidGateway = CryptoUtil.verifyPayload(payloadSignature, payload, sender);

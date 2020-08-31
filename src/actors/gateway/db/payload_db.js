@@ -1,14 +1,31 @@
 const Database = require('../../utils/db');
 const db = new Database();
 
+/**
+ * Payload Database Class.
+ * 
+ * This class is to store the list of IoT device authentication payload
+ * that the gateway sends to vendor.
+ */
 class PayloadDatabase {
-  static async storeNewPayload(auth, payloadHash, authOption, signature, vendorAddress, vendorPublicKey, deviceAddress) {
+  /**
+   * Store new device authentication payload.
+   * 
+   * @param {object} auth the device authentication payload
+   * @param {string} payloadHash payload hash string
+   * @param {number} authOption the type of device authentication option
+   * @param {string} deviceSignature the device signature from vendor
+   * @param {string} vendorAddress the corresponding vendor blockchain address
+   * @param {string} vendorPublicKey the corresponding vendor public key
+   * @param {string} deviceAddress the device blockchain address
+   */
+  static async storeNewPayload(auth, payloadHash, authOption, deviceSignature, vendorAddress, vendorPublicKey, deviceAddress) {
     try {
-      const payload = {
+      const value = {
         auth: auth,
         authHash: payloadHash,
         authOption: authOption,
-        signature: signature,
+        deviceSignature: deviceSignature,
         vendorAddress: vendorAddress,
         vendorPublicKey: vendorPublicKey,
         deviceAddress: deviceAddress,
@@ -19,73 +36,102 @@ class PayloadDatabase {
         isRevoked: false
       }
 
-      await db.set(payloadHash, payload);
+      await db.set(payloadHash, value);
 
     } catch (err) {
-      throw new Error(`error when storing new payload! ${err}`);
+      throw new Error(`payload db: error when storing new payload! ${err}`);
     }
   }
 
-  static async updatePayloadStateToStored(payloadHash, gateway, device) {
+  /**
+   * Update the state of the authentication payload to stored.
+   * 
+   * @param {string} payloadHash payload hash string
+   * @param {string} gatewayAddress the gateway blockchain address
+   * @param {string} deviceAddress the device blockchain address
+   */
+  static async updatePayloadStateToStored(payloadHash, gatewayAddress, deviceAddress) {
     try {
-      const storedPayload = await db.get(payloadHash);
+      const value = await db.get(payloadHash);
 
-      if (!storedPayload) throw new Error('payload hash does not exist!');
-      if (storedPayload.deviceAddress != device) throw new Error('payload hash and device does not match!');
+      if (!value) throw new Error('payload db: payload hash does not exist!');
+      if (value.deviceAddress != deviceAddress) throw new Error('payload db: payload hash and device does not match!');
 
-      storedPayload.gatewayAddress = gateway;
-      storedPayload.isStored = true;
+      value.gatewayAddress = gatewayAddress;
+      value.isStored = true;
 
-      await db.replace(payloadHash, storedPayload);
+      await db.replace(payloadHash, value);
 
     } catch (err) {
-      throw new Error(`error when updating payload state to stored! ${err}`);
+      throw new Error(`payload db: error when updating payload state to stored! ${err}`);
     }
   }
 
-  static async updatePayloadStateToApproved(payloadHash, approver, device) {
+  /**
+   * Update the state of the authentication payload to approved.
+   * 
+   * @param {string} payloadHash payload hash string
+   * @param {string} approver the blockchain address of the approver
+   * @param {string} deviceAddress the device blockchain address
+   */
+  static async updatePayloadStateToApproved(payloadHash, approver, deviceAddress) {
     try {
-      const storedPayload = await db.get(payloadHash);
+      const value = await db.get(payloadHash);
 
-      if (!storedPayload) throw new Error('payload hash does not exist!');
-      if (storedPayload.deviceAddress != device) throw new Error('payload hash and device does not match!');
+      if (!value) throw new Error('payload db: payload hash does not exist!');
+      if (value.deviceAddress != deviceAddress) throw new Error('payload db: payload hash and device does not match!');
 
-      storedPayload.approverAddress = approver;
-      storedPayload.isApproved = true;
+      value.approverAddress = approver;
+      value.isApproved = true;
 
-      await db.replace(payloadHash, storedPayload);
+      await db.replace(payloadHash, value);
 
     } catch (err) {
-      throw new Error(`error when updating payload state to approved! ${err}`);
+      throw new Error(`payload db: error when updating payload state to approved! ${err}`);
     }
   }
 
+  /**
+   * Get the details of device authentication payload.
+   * 
+   * @param {string} payloadHash payload hash string
+   */
   static async getPayload(payloadHash) {
     try {
-      const storedPayload = await db.get(payloadHash);
-      if (!storedPayload) throw new Error('payload hash does not exist!');
+      const value = await db.get(payloadHash);
+      if (!value) throw new Error('payload db: payload hash does not exist!');
 
-      return storedPayload;
+      return value;
 
     } catch (err) {
-      throw new Error(`error when getting payload! ${err}`);
+      throw new Error(`payload db: error when getting payload! ${err}`);
     }
   }
 
+  /**
+   * Check whether the given authentication payload exist.
+   * 
+   * @param {string} payloadHash payload hash string
+   */
   static async doesPayloadExist(payloadHash) {
-    const storedPayload = await db.get(payloadHash);
-    if (!storedPayload) return false;
+    const value = await db.get(payloadHash);
+    if (!value) return false;
     return true;
   }
 
+  /**
+   * Check whether the given authentication payload is already approved.
+   * 
+   * @param {string} payloadHash payload hash string
+   */
   static async isPayloadApproved(payloadHash) {
     try {
-      const storedPayload = await db.get(payloadHash);
-      if (!storedPayload || !storedPayload.isApproved) return false;
+      const value = await db.get(payloadHash);
+      if (!value || !value.isApproved) return false;
       return true;
 
     } catch (err) {
-      throw new Error(`error when checking payload approval state! ${err}`);
+      throw new Error(`payload db: error when checking payload approval state! ${err}`);
     }
   }
 }

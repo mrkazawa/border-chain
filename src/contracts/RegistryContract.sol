@@ -28,12 +28,12 @@ contract RegistryContract {
         address target,
         address approver
     );
-    event GatewayApproved(bytes32 payloadHash, address sender, address gateway);
+    event GatewayApproved(bytes32 payloadHash, address sender, address target);
     event DeviceApproved(
         bytes32 payloadHash,
         address sender,
-        address gateway,
-        address device
+        address source,
+        address target
     );
     event AccessApproved(
         bytes32 payloadHash,

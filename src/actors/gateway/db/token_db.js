@@ -37,6 +37,15 @@ class TokenDatabase {
     }
   }
 
+  /**
+   * Updating the access token state to apporved.
+   * This indicates that the approver already verified
+   * the authorization payload.
+   * 
+   * @param {string} payloadHash payload hash string
+   * @param {string} approver blockchain address of authorization approver
+   * @param {number} expiryTime expiry time in epoch UNIX time
+   */
   static async updateTokenStateToApproved(payloadHash, approver, expiryTime) {
     try {
       const value = await db.get(payloadHash);
@@ -53,6 +62,12 @@ class TokenDatabase {
     }
   }
 
+  /**
+   * Tie list of accesses to given access token (payload hash string).
+   * 
+   * @param {string} payloadHash payload hash string
+   * @param {object} accesses list of accesses tied to access token
+   */
   static async setAccesses(payloadHash, accesses) {
     try {
       const value = await db.get(payloadHash);
@@ -67,6 +82,11 @@ class TokenDatabase {
     }
   }
 
+  /**
+   * Get the access token detail.
+   * 
+   * @param {string} payloadHash payload hash string
+   */
   static async getTokenObject(payloadHash) {
     try {
       const value = await db.get(payloadHash);
@@ -79,6 +99,12 @@ class TokenDatabase {
     }
   }
 
+  /**
+   * Check whether the state of the given access token
+   * (payload hash string) is approved.
+   * 
+   * @param {string} payloadHash payload hash string
+   */
   static async isTokenApproved(payloadHash) {
     try {
       const value = await db.get(payloadHash);

@@ -85,8 +85,8 @@ describe('Device Authentication Part 2 -- Approving Authenticaiton Test', functi
       truffleAssert.eventEmitted(tx, 'DeviceApproved', {
         payloadHash: payloadHash,
         sender: vendorAddress,
-        gateway: gatewayAddress,
-        device: deviceAddress
+        source: gatewayAddress,
+        target: deviceAddress
       });
 
       status = await RC.isTrustedDevice(deviceAddress, {

@@ -48,8 +48,8 @@ async function initiateSystemSharedParameters() {
   const vendor = CryptoUtil.createNewIdentity();
   const device = CryptoUtil.createNewIdentity();
 
-  const signature = CryptoUtil.signPayload(vendor.privateKey, device.address);
-  const deviceProperties = appendToDeviceProperties(DEVICE_PROPERTIES, signature, device, vendor);
+  const deviceSignature = CryptoUtil.signPayload(vendor.privateKey, device.address);
+  const deviceProperties = appendToDeviceProperties(DEVICE_PROPERTIES, deviceSignature, device, vendor);
 
   const [assigned, deviceRegistered, vendorRegistered, abi] = await Promise.all([
     Messenger.seedEtherToVendor(vendor.address),
@@ -74,8 +74,8 @@ async function initiateSystemSharedParameters() {
   return [abi, vendor];
 }
 
-function appendToDeviceProperties(deviceProperties, signature, device, vendor) {
-  deviceProperties.signature = signature;
+function appendToDeviceProperties(deviceProperties, deviceSignature, device, vendor) {
+  deviceProperties.deviceSignature = deviceSignature;
   deviceProperties.address = device.address;
   deviceProperties.publicKey = device.publicKey;
   deviceProperties.privateKey = device.privateKey;

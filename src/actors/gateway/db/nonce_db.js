@@ -1,7 +1,22 @@
 const Database = require('../../utils/db');
 const db = new Database();
 
+/**
+ * Nonce Database Class.
+ * 
+ * This class is to store list of secret keys generated
+ * during the handshake between the gateway and IoT service
+ * to protect the access token and resource.
+ * 
+ * Each exchange will produce unique nonce that we can use as keys.
+ * The value will be the assembled secret key.
+ */
 class NonceDatabase {
+  /**
+   * Store a new nonce with a default 'secret' value.
+   * 
+   * @param {string} nonce the nonce string from IoT service during the exchange
+   */
   static async storeNewNonce(nonce) {
     try {
       await db.set(nonce, 'secret'); // default value
@@ -10,6 +25,12 @@ class NonceDatabase {
     }
   }
 
+  /**
+   * Update the value of secret key from given nonce.
+   * 
+   * @param {string} nonce the nonce string
+   * @param {string} secret the assmebled secet key from the exchange
+   */
   static async updateSecret(nonce, secret) {
     try {
       const value = await db.get(nonce);
@@ -22,6 +43,11 @@ class NonceDatabase {
     }
   }
 
+  /**
+   * Get the current secret key from given nonce.
+   * 
+   * @param {string} nonce the nonce string
+   */
   static async getSecret(nonce) {
     try {
       const value = await db.get(nonce);
@@ -34,6 +60,11 @@ class NonceDatabase {
     }
   }
 
+  /**
+   * Check whether the given nonce exist.
+   * 
+   * @param {string} nonce the nonce string
+   */
   static async isExist(nonce) {
     try {
       const value = await db.get(nonce);

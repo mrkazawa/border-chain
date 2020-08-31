@@ -59,8 +59,8 @@ class Contract {
 
       const payloadHash = event.returnValues['payloadHash'];
       const sender = event.returnValues['sender'];
-      const gateway = event.returnValues['gateway'];
-      const device = event.returnValues['device'];
+      const gateway = event.returnValues['source'];
+      const device = event.returnValues['target'];
 
       if (gateway == ourGateway.address) {
         log(chalk.yellow(`Contract event: ${payloadHash} device authentication payload is approved`));

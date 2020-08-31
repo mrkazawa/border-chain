@@ -51,7 +51,7 @@ class Processor {
     const strippedPayload = {
       authOption: storedPayload.authOption,
       auth: storedPayload.auth,
-      signature: storedPayload.signature
+      deviceSignature: storedPayload.deviceSignature
     };
 
     const payloadSignature = CryptoUtil.signPayload(gateway.privateKey, strippedPayload);
@@ -90,7 +90,7 @@ class Processor {
     const payloadHash = payload.authHash;
     const auth = payload.auth;
     const authOption = payload.authOption;
-    const signature = payload.signature;
+    const deviceSignature = payload.deviceSignature;
     const vendorAddress = payload.vendorAddress;
     const vendorPublicKey = payload.vendorPublicKey;
     const deviceAddress = payload.deviceAddress;
@@ -98,10 +98,10 @@ class Processor {
     const exist = await PayloadDatabase.doesPayloadExist(payloadHash);
     if (!isBenchmarkingGateway() && exist) return res.status(401).send(`we already processed this hash before!`);
 
-    const isValid = CryptoUtil.verifyPayload(signature, deviceAddress, vendorAddress);
+    const isValid = CryptoUtil.verifyPayload(deviceSignature, deviceAddress, vendorAddress);
     if (!isValid) return res.status(401).send('the device signature is invalid!');
 
-    await PayloadDatabase.storeNewPayload(auth, payloadHash, authOption, signature, vendorAddress, vendorPublicKey, deviceAddress);
+    await PayloadDatabase.storeNewPayload(auth, payloadHash, authOption, deviceSignature, vendorAddress, vendorPublicKey, deviceAddress);
 
     const txNonce = await SystemDatabase.getCurrentTxNonce();
     contract.storePayload(payloadHash, deviceAddress, vendorAddress, gateway, txNonce);

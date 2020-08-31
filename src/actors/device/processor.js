@@ -90,7 +90,7 @@ class Processor {
       authHash: authHash,
       auth: auth,
       authOption: option,
-      signature: device.signature,
+      deviceSignature: device.deviceSignature,
       deviceAddress: device.address,
       vendorAddress: device.vendorAddress,
       vendorPublicKey: device.vendorPublicKey

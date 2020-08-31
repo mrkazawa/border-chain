@@ -72,7 +72,7 @@ describe('Gateway Authentication Part 2 -- Approving Authenticaiton Test', funct
       truffleAssert.eventEmitted(tx, 'GatewayApproved', {
         payloadHash: payloadHash,
         sender: ispAddress,
-        gateway: gatewayAddress
+        target: gatewayAddress
       });
 
       status = await RC.isTrustedGateway(gatewayAddress, {
