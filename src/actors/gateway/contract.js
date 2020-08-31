@@ -42,7 +42,7 @@ class Contract {
 
       if (sender == gateway.address) {
         log(chalk.yellow(`Contract event: ${payloadHash} device authentication payload is stored`));
-        Processor.processAuthenticationPayloadAddedEvent(payloadHash, target, gateway);
+        Processor.processAuthenticationPayloadAddedEvent(payloadHash, target, gateway, approver);
       
       } else if (approver == gateway.address) {
         log(chalk.yellow(`Contract event: ${payloadHash} access authorization payload is stored`));

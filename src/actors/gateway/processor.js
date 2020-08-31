@@ -23,10 +23,10 @@ const {
 } = require('./config');
 
 class Processor {
-  static async processAuthenticationPayloadAddedEvent(payloadHash, target, gateway) {
+  static async processAuthenticationPayloadAddedEvent(payloadHash, target, gateway, approver) {
     if (await PayloadDatabase.isPayloadApproved(payloadHash)) log(chalk.yellow(`do nothing, we have already processed ${payloadHash} before`));
     else {
-      await PayloadDatabase.updatePayloadStateToStored(payloadHash, gateway.address, target);
+      await PayloadDatabase.updatePayloadStateToStored(payloadHash, gateway.address, target, approver);
       await Processor.prepareAndSendToVendor(payloadHash, gateway);
     }
   }

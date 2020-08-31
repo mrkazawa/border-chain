@@ -17,9 +17,9 @@ class PayloadDatabase {
    * @param {string} deviceSignature the device signature from vendor
    * @param {string} vendorAddress the corresponding vendor blockchain address
    * @param {string} vendorPublicKey the corresponding vendor public key
-   * @param {string} deviceAddress the device blockchain address
+   * @param {string} target the device blockchain address
    */
-  static async storeNewPayload(auth, payloadHash, authOption, deviceSignature, vendorAddress, vendorPublicKey, deviceAddress) {
+  static async storeNewPayload(auth, payloadHash, authOption, deviceSignature, vendorAddress, vendorPublicKey, target) {
     try {
       const value = {
         auth: auth,
@@ -28,9 +28,9 @@ class PayloadDatabase {
         deviceSignature: deviceSignature,
         vendorAddress: vendorAddress,
         vendorPublicKey: vendorPublicKey,
-        deviceAddress: deviceAddress,
-        approverAddress: '',
-        gatewayAddress: '',
+        source: '',
+        target: target,
+        approver: '',
         isStored: false,
         isApproved: false,
         isRevoked: false
@@ -47,17 +47,19 @@ class PayloadDatabase {
    * Update the state of the authentication payload to stored.
    * 
    * @param {string} payloadHash payload hash string
-   * @param {string} gatewayAddress the gateway blockchain address
-   * @param {string} deviceAddress the device blockchain address
+   * @param {string} source the gateway blockchain address
+   * @param {string} target the device blockchain address
+   * @param {string} approver the vendor blockchain address
    */
-  static async updatePayloadStateToStored(payloadHash, gatewayAddress, deviceAddress) {
+  static async updatePayloadStateToStored(payloadHash, source, target, approver) {
     try {
       const value = await db.get(payloadHash);
 
       if (!value) throw new Error('payload db: payload hash does not exist!');
-      if (value.deviceAddress != deviceAddress) throw new Error('payload db: payload hash and device does not match!');
+      if (value.target != target) throw new Error('payload db: payload hash and device does not match!');
 
-      value.gatewayAddress = gatewayAddress;
+      value.source = source;
+      value.approver = approver;
       value.isStored = true;
 
       await db.replace(payloadHash, value);
@@ -71,17 +73,17 @@ class PayloadDatabase {
    * Update the state of the authentication payload to approved.
    * 
    * @param {string} payloadHash payload hash string
-   * @param {string} approver the blockchain address of the approver
-   * @param {string} deviceAddress the device blockchain address
+   * @param {string} approver the vendor blockchain address
+   * @param {string} target the device blockchain address
    */
-  static async updatePayloadStateToApproved(payloadHash, approver, deviceAddress) {
+  static async updatePayloadStateToApproved(payloadHash, approver, target) {
     try {
       const value = await db.get(payloadHash);
 
       if (!value) throw new Error('payload db: payload hash does not exist!');
-      if (value.deviceAddress != deviceAddress) throw new Error('payload db: payload hash and device does not match!');
+      if (value.target != target) throw new Error('payload db: payload hash and device does not match!');
+      if (value.approver != approver) throw new Error('payload db: payload hash and approver does not match!');
 
-      value.approverAddress = approver;
       value.isApproved = true;
 
       await db.replace(payloadHash, value);
