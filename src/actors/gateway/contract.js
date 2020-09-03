@@ -2,7 +2,7 @@ const chalk = require('chalk');
 const log = console.log;
 
 const isBenchmarkingGateway = () => {
-  return (process.env.STRESS_GATEWAY == "true");
+  return (process.env.BENCHMARKING_GATEWAY == "true");
 };
 
 const isBenchmarkingAccess = () => {

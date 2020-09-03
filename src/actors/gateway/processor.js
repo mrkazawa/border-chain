@@ -2,10 +2,10 @@ const chalk = require('chalk');
 const log = console.log;
 
 const isBenchmarkingGateway = () => {
-  return (process.env.STRESS_GATEWAY == "true");
+  return (process.env.BENCHMARKING_GATEWAY == "true");
 };
 const isBenchmarkingVendor = () => {
-  return (process.env.STRESS_VENDOR == "true");
+  return (process.env.BENCHMARKING_VENDOR == "true");
 };
 
 const CryptoUtil = require('../utils/crypto-util');
@@ -74,9 +74,9 @@ class Processor {
     const body = {
       payload: payload
     };
-    const connections = 500;
-    const overallRate = 0;
-    const amount = 100000;
+    const connections = BenchUtil.getNumberOfConnections();
+    const overallRate = BenchUtil.getOverallRate();
+    const amount = BenchUtil.getRequestAmount();
 
     const instance = BenchUtil.createPostAutoCannonInstance(title, url, body, connections, overallRate, amount);
 

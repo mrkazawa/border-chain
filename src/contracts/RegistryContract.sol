@@ -241,6 +241,7 @@ contract RegistryContract {
         return (trustedGateways[trustedDevices[device]] != 0);
     }
 
+    // TODO: Check if the gateway is trusted
     function isValidAccess(bytes32 payloadHash)
         public
         view

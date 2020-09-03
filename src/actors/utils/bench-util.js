@@ -48,6 +48,33 @@ class BenchUtil {
       process.exit(0);
     });
   }
+
+  /**
+   * Get the 'amount' parameter for our benchmark.
+   * This parameter determines how many requests we will
+   * send during the benchmark.
+   */
+  static getRequestAmount() {
+    return 100000;
+  }
+
+  /**
+   * Get the 'connections' parameter for our benchmark.
+   * This parameter determines how many simulated clients we will
+   * use during the benchmark.
+   */
+  static getNumberOfConnections() {
+    return 1;
+  }
+
+  /**
+   * Get the 'overallRate' parameter for our benchmark.
+   * This parameter is to throttle the number of request sent
+   * to the target during the benchmark.
+   */
+  static getOverallRate() {
+    return 0;
+  }
 }
 
 module.exports = BenchUtil;

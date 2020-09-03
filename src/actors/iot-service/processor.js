@@ -62,9 +62,9 @@ class Processor {
     const body = {
       payload: payload
     };
-    const connections = 500;
-    const overallRate = 0;
-    const amount = 100000;
+    const connections = BenchUtil.getNumberOfConnections();
+    const overallRate = BenchUtil.getOverallRate();
+    const amount = BenchUtil.getRequestAmount();
 
     const instance = BenchUtil.createPostAutoCannonInstance(title, url, body, connections, overallRate, amount);
 
@@ -134,9 +134,9 @@ class Processor {
     const body = {
       payload: payload
     };
-    const connections = 500;
-    const overallRate = 0;
-    const amount = 100000;
+    const connections = BenchUtil.getNumberOfConnections();
+    const overallRate = BenchUtil.getOverallRate();
+    const amount = BenchUtil.getRequestAmount();
 
     const instance = BenchUtil.createPostAutoCannonInstance(title, url, body, connections, overallRate, amount);
 
@@ -149,9 +149,9 @@ class Processor {
     const body = {
       payload: payload
     };
-    const connections = 500;
-    const overallRate = 0;
-    const amount = 100000;
+    const connections = BenchUtil.getNumberOfConnections();
+    const overallRate = BenchUtil.getOverallRate();
+    const amount = BenchUtil.getRequestAmount();
 
     const instance = BenchUtil.createPostAutoCannonInstance(title, url, body, connections, overallRate, amount);
 
