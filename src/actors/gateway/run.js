@@ -77,7 +77,7 @@ async function runWorkers() {
     });
 
     app.post('/authorize', async (req, res) => {
-      Processor.processServiceAuthorization(req, res, contract, gateway);
+      Processor.processAccessAuthorization(req, res, contract, gateway);
     });
 
     app.post('/handshake', async (req, res) => {

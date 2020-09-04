@@ -19,7 +19,7 @@ async function main() {
   const isp = {
     address: ispInfo.address,
     publicKey: ispInfo.publicKey
-  }
+  };
 
   const contract = new Contract(abi);
   contract.addPayloadAddedEventListener(OWNER, auth, isp);

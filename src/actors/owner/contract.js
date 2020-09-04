@@ -38,7 +38,7 @@ class Contract {
     });
   }
 
-  addGatewayApprovedEventListener(ourGateway) {
+  addGatewayApprovedEventListener(gateway) {
     this.contract.events.GatewayApproved({
       fromBlock: 0
     }, function (error, event) {
@@ -46,12 +46,12 @@ class Contract {
 
       const payloadHash = event.returnValues['payloadHash'];
       const approver = event.returnValues['sender'];
-      const gateway = event.returnValues['target'];
+      const target = event.returnValues['target'];
 
-      if (gateway == ourGateway.address) {
+      if (target == gateway.address) {
         log(chalk.yellow(`Contract event: ${payloadHash} payload is approved`));
 
-        Processor.processGatewayApprovedEvent(payloadHash, approver, ourGateway);
+        Processor.processGatewayApprovedEvent(payloadHash, approver, gateway);
       }
     });
   }

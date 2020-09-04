@@ -4,6 +4,9 @@ const log = console.log;
 const isBenchmarkingGateway = () => {
   return (process.env.BENCHMARKING_GATEWAY == "true");
 };
+const isBenchmarkingHandshake = () => {
+  return (process.env.BENCHMARKING_HANDSHAKE == "true");
+};
 const isBenchmarkingVendor = () => {
   return (process.env.BENCHMARKING_VENDOR == "true");
 };
@@ -23,6 +26,8 @@ const {
 } = require('./config');
 
 class Processor {
+  //------------------------- Device Authentication -------------------------//
+
   static async processAuthenticationPayloadAddedEvent(payloadHash, target, gateway, approver) {
     if (await PayloadDatabase.isPayloadApproved(payloadHash)) log(chalk.yellow(`do nothing, we have already processed ${payloadHash} before`));
     else {
@@ -34,16 +39,6 @@ class Processor {
   static async processDeviceApprovedEvent(payloadHash, sender, device) {
     if (await PayloadDatabase.isPayloadApproved(payloadHash)) log(chalk.yellow(`do nothing, we have already processed ${payloadHash} before`));
     else await PayloadDatabase.updatePayloadStateToApproved(payloadHash, sender, device);
-  }
-
-  static async processAuthorizationPayloadAddedEvent(payloadHash, sender, target, approver) {
-    if (await TokenDatabase.isTokenApproved(payloadHash)) log(chalk.yellow(`do nothing, we have already processed ${payloadHash} before`));
-    else await TokenDatabase.storeNewToken(payloadHash, sender, target, approver);
-  }
-
-  static async processAccessApprovedEvent(payloadHash, approver, expiryTime) {
-    if (await TokenDatabase.isTokenApproved(payloadHash)) log(chalk.yellow(`do nothing, we have already processed ${payloadHash} before`));
-    else await TokenDatabase.updateTokenStateToApproved(payloadHash, approver, expiryTime);
   }
 
   static async prepareAndSendToVendor(payloadHash, gateway) {
@@ -110,6 +105,18 @@ class Processor {
     return res.status(200).send('payload received, forwarding to vendor!');
   }
 
+  //------------------------- Access Authorization -------------------------//
+
+  static async processAuthorizationPayloadAddedEvent(payloadHash, sender, target, approver) {
+    if (await TokenDatabase.isTokenApproved(payloadHash)) log(chalk.yellow(`do nothing, we have already processed ${payloadHash} before`));
+    else await TokenDatabase.storeNewToken(payloadHash, sender, target, approver);
+  }
+
+  static async processAccessApprovedEvent(payloadHash, approver, expiryTime) {
+    if (await TokenDatabase.isTokenApproved(payloadHash)) log(chalk.yellow(`do nothing, we have already processed ${payloadHash} before`));
+    else await TokenDatabase.updateTokenStateToApproved(payloadHash, approver, expiryTime);
+  }
+
   static async assignAccess(req, res, gateway) {
     if (req.body.constructor === Object && Object.keys(req.body).length === 0) return res.status(401).send('your request does not have body!');
 
@@ -131,7 +138,7 @@ class Processor {
     return res.status(200).send(responses);
   }
 
-  static async processServiceAuthorization(req, res, contract, gateway) {
+  static async processAccessAuthorization(req, res, contract, gateway) {
     if (req.body.constructor === Object && Object.keys(req.body).length === 0) return res.status(401).send('your request does not have body!');
 
     const encryptedPayload = req.body.payload;
@@ -144,6 +151,7 @@ class Processor {
     const storedToken = await TokenDatabase.getTokenObject(payloadHash);
     if (!storedToken) return res.status(404).send('payload not found!');
 
+    // TODO: Change sender to source for all
     const sender = storedToken.sender;
     const isApproved = storedToken.isApproved;
     if (isApproved) return res.status(401).send('replay? we already process this before!');
@@ -171,6 +179,8 @@ class Processor {
     return res.status(200).send('authorization attempt successful!');
   }
 
+  //------------------------- Accesing Resource -------------------------//
+
   static async processHandshake(req, res, gateway) {
     if (req.body.constructor === Object && Object.keys(req.body).length === 0) return res.status(401).send('your request does not have body!');
 
@@ -184,7 +194,7 @@ class Processor {
     const nonce = payload.nonce;
     const servicePublicKey = payload.publicKey;
 
-    if (await NonceDatabase.isExist(nonce)) return res.status(401).send('replay? we already process this before!');
+    if (!isBenchmarkingHandshake() && await NonceDatabase.isExist(nonce)) return res.status(401).send('replay? we already process this before!');
     else await NonceDatabase.storeNewNonce(nonce);
 
     const storedToken = await TokenDatabase.getTokenObject(token);
@@ -198,7 +208,7 @@ class Processor {
       !isApproved ||
       isRevoked ||
       (expiryTime * 1000 < Date.now())
-    ) return res.status(404).send('invalid token!');
+    ) return res.status(401).send('invalid token!');
 
     const isValid = CryptoUtil.verifyPayload(payloadSignature, payload, sender);
     if (!isValid) return res.status(401).send('invalid signature!');
@@ -217,7 +227,7 @@ class Processor {
     const response = await CryptoUtil.encryptPayload(servicePublicKey, payloadForService);
 
     const secretKey = payload.secret + exchange.secret;
-    await NonceDatabase.updateSecret(nonce, secretKey);  
+    await NonceDatabase.updateSecret(nonce, secretKey);
 
     return res.status(200).send(response);
   }
@@ -248,6 +258,7 @@ class Processor {
       (expiryTime * 1000 < Date.now())
     ) return res.status(401).send('invalid token!');
 
+    // a mock device temperature response
     const response = {
       deviceAddress: 'deviceAddress',
       temperature: 25

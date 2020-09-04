@@ -35,7 +35,7 @@ async function main() {
 
 async function initiateSystemParameters() {
   try {
-    const [assigned, abi, gateway, accesses] = await Promise.all([
+    const [assigned, abi, gateway, responses] = await Promise.all([
       Messenger.seedEtherToService(SERVICE.address),
       Messenger.getContractAbi(),
       Messenger.getGatewayInfo(),
@@ -45,16 +45,16 @@ async function initiateSystemParameters() {
 
     log(chalk.yellow(assigned));
 
-    return [abi, gateway, accesses];
+    return [abi, gateway, responses];
 
   } catch (err) {
     throw new Error(`error when initiating system parameters! ${err}`);
   }
 }
 
-function constructAuthorizationPayload(chosenAccesses) {
+function constructAuthorizationPayload(accesses) {
   return {
-    accesses: chosenAccesses,
+    accesses: accesses,
     timestamp: Date.now(),
     nonce: CryptoUtil.randomValueBase64(64)
   }

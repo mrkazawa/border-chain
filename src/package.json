@@ -21,6 +21,7 @@
     "gateway": "node actors/gateway/run",
     "gateway-benchmark-access": "BENCHMARKING_ACCESS=true node actors/gateway/run",
     "gateway-benchmark-gateway": "BENCHMARKING_GATEWAY=true node actors/gateway/run",
+    "gateway-benchmark-handshake": "BENCHMARKING_HANDSHAKE=true node actors/gateway/run",
     "gateway-benchmark-vendor": "BENCHMARKING_VENDOR=true node actors/gateway/run",
     "service": "node actors/iot-service/run",
     "service-benchmark-access": "BENCHMARKING_ACCESS=true node actors/iot-service/run",
@@ -44,7 +45,7 @@
   "author": "Yustus Oktian",
   "license": "MIT",
   "dependencies": {
-    "autocannon": "^5.1.0",
+    "autocannon": "^6.1.0",
     "axios": "^0.19.2",
     "body-parser": "^1.19.0",
     "chalk": "^3.0.0",

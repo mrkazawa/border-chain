@@ -64,7 +64,7 @@ class BenchUtil {
    * use during the benchmark.
    */
   static getNumberOfConnections() {
-    return 1;
+    return 50;
   }
 
   /**
@@ -73,7 +73,7 @@ class BenchUtil {
    * to the target during the benchmark.
    */
   static getOverallRate() {
-    return 0;
+    return 10000;
   }
 }
 
