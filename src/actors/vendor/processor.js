@@ -80,7 +80,7 @@ class Processor {
     }
   }
 
-  static async verifyPublicKeyPayload(receivedAuth, target) {
+  static verifyPublicKeyPayload(receivedAuth, target) {
     const auth = receivedAuth.auth;
     const authSignature = receivedAuth.authSignature;
 

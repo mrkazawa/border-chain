@@ -64,7 +64,7 @@ class BenchUtil {
    * use during the benchmark.
    */
   static getNumberOfConnections() {
-    return 50;
+    return 10;
   }
 
   /**
