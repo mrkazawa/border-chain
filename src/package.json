@@ -8,6 +8,7 @@
     "admin": "truffle deploy && node actors/admin",
     "owner": "node actors/owner/run",
     "owner-benchmark": "BENCHMARKING=true node actors/owner/run",
+    "owner-client-benchmark": "BENCHMARKING=true node actors/owner/client-benchmark",
     "isp": "node actors/isp/run",
     "isp-benchmark": "BENCHMARKING=true node actors/isp/run",
     "device-pksig": "node actors/device/run 1",

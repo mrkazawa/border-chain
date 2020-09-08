@@ -17,7 +17,7 @@ class BenchUtil {
       bailout: 1000,
       overallRate: overallRate,
       amount: amount,
-      duration: 1
+      duration: 30
     });
   }
 
@@ -55,7 +55,7 @@ class BenchUtil {
    * send during the benchmark.
    */
   static getRequestAmount() {
-    return 100000;
+    return 0;
   }
 
   /**
@@ -73,7 +73,7 @@ class BenchUtil {
    * to the target during the benchmark.
    */
   static getOverallRate() {
-    return 10000;
+    return 0;
   }
 }
 
