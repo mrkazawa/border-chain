@@ -23,13 +23,19 @@ Vagrant.configure("2") do |config|
         vb.name = "actor#{i}"
         vb.memory = BOX_MEMORY
         case i
-        when 1,2,3,7 # for admin, IoT domain owner, IoT device, and IoT service
+        when 1 # for admin
+          vb.cpus = 1
+        when 2 # for iot domain owner
+          vb.cpus = 2
+        when 3 # for iot device
           vb.cpus = 1
         when 4 # for isp
           vb.cpus = 1
-        when 5 # for IoT gateway
+        when 5 # for iot gateway
           vb.cpus = 1
-        when 6 # for IoT vendor
+        when 6 # for iot vendor
+          vb.cpus = 1
+        when 7 # for iot service
           vb.cpus = 1
         end
       end

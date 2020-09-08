@@ -1,10 +1,6 @@
 const chalk = require('chalk');
 const log = console.log;
 
-const isBenchmarking = () => {
-  return (process.env.BENCHMARKING == "true");
-};
-
 const EthereumUtil = require('../utils/ethereum-util');
 const CryptoUtil = require('../utils/crypto-util');
 const Processor = require('./processor');
@@ -73,7 +69,7 @@ class Contract {
     };
 
     const signedStoreAuthTx = CryptoUtil.signTransaction(owner.privateKey, storeAuthTx);
-    if (!isBenchmarking()) await EthereumUtil.sendTransaction(signedStoreAuthTx);
+    await EthereumUtil.sendTransaction(signedStoreAuthTx);
   }
 }
 
