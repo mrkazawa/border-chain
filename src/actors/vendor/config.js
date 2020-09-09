@@ -17,7 +17,7 @@ const DEVICE_AUTHN_OPTION = {
 
 // mock device properties
 const DEVICE_PROPERTIES = {
-  secretKey: 'secret',
+  secretKey: '4605d44703c2620fc2574c9a9216bd3267457324',
   fingerprint: 'cf23df2207d99a74fbe169e3eba035e633b65d94',
   mac: '00-14-22-01-23-45'
 };

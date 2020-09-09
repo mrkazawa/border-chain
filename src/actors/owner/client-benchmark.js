@@ -6,8 +6,8 @@ const log = console.log;
 const CryptoUtil = require('../utils/crypto-util');
 const EthereumUtil = require('../utils/ethereum-util');
 const Messenger = require('./messenger');
-const PayloadDatabase = require('./db/payload_db');
-const SystemDatabase = require('./db/system_db');
+const PayloadDatabase = require('./db/payload-db');
+const SystemDatabase = require('./db/system-db');
 
 const {
   ETH_NETWORK_ID

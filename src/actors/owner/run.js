@@ -5,15 +5,15 @@ const CryptoUtil = require('../utils/crypto-util');
 
 const Contract = require('./contract');
 const Messenger = require('./messenger');
-const PayloadDatabase = require('./db/payload_db');
-const SystemDatabase = require('./db/system_db');
+const PayloadDatabase = require('./db/payload-db');
+const SystemDatabase = require('./db/system-db');
 
 const OWNER = CryptoUtil.createNewIdentity();
 const GATEWAY = CryptoUtil.createNewIdentity();
 
 async function main() {
-  const [abi, user, ispInfo] = await initiateSystemParameters();
-  const auth = createAuthenticationPayload(user, ispInfo.routerIp);
+  const [abi, creds, ispInfo] = await initiateSystemParameters();
+  const auth = createAuthenticationPayload(creds, ispInfo.routerIp);
   const authHash = CryptoUtil.hashPayload(auth);
 
   const isp = {
@@ -31,19 +31,18 @@ async function main() {
 
 async function initiateSystemParameters() {
   try {
-    // TODO: change the store owner identity
+    const creds = createDomainOwnerCredential();
     const [assigned, abi] = await Promise.all([
       Messenger.seedEtherToOwner(OWNER.address),
       Messenger.getContractAbi(),
-      SystemDatabase.storeOwnerIdentity(OWNER)
+      SystemDatabase.storeOwnerIdentity(OWNER, creds)
     ]);
 
     log(chalk.yellow(assigned));
 
-    const user = createDomainOwnerCredential();
-    const ispInfo = await Messenger.sendUserRegistrationToIsp(OWNER.address, user.username, user.password);
+    const ispInfo = await Messenger.sendUserRegistrationToIsp(OWNER.address, creds.username, creds.password);
 
-    return [abi, user, ispInfo];
+    return [abi, creds, ispInfo];
 
   } catch (err) {
     throw new Error(`error when initiating system parameters! ${err}`);

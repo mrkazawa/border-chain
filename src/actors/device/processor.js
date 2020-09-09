@@ -64,24 +64,24 @@ class Processor {
   }
   
   static constructFingerprintPayload(device) {
-    const auth = {
-      fingerprint: CryptoUtil.hashPayload(device.fingerprint),
+    let auth = {
       timestamp: Date.now(),
       nonce: CryptoUtil.randomValueBase64(64)
     }
     const authHash = CryptoUtil.hashPayload(auth);
+    auth.fingerprint =  CryptoUtil.hash(device.fingerprint);
   
     return [authHash, auth];
   }
   
   static constructMacPayload(device) {
-    const auth = {
-      mac: device.mac,
+    let auth = {
       timestamp: Date.now(),
       nonce: CryptoUtil.randomValueBase64(64)
     }
     const authHash = CryptoUtil.hashPayload(auth);
-  
+    auth.mac = device.mac;
+    
     return [authHash, auth];
   }
 

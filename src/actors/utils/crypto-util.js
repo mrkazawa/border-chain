@@ -22,13 +22,12 @@ class CryptoUtil {
     return EthCrypto.createIdentity();
   }
 
-  /*static hashPayload(payload) {
-    const string = JSON.stringify(payload);
-    return EthCrypto.hash.keccak256(string);
-  }*/
-
   static hashPayload(payload) {
     const string = JSON.stringify(payload);
+    return EthCrypto.hash.keccak256(string);
+  }
+
+  static hash(string) {
     return crypto.createHash('sha256').update(string).digest('hex');
   }
 

@@ -37,8 +37,15 @@ class Processor {
     if (
       authOption == DEVICE_AUTHN_OPTION.PKSIG ||
       authOption == DEVICE_AUTHN_OPTION.HMAC
-    ) payloadHash = CryptoUtil.hashPayload(auth.auth);
-    else payloadHash = CryptoUtil.hashPayload(auth);
+    ) {
+      payloadHash = CryptoUtil.hashPayload(auth.auth);
+    } else {
+      const stripped = {
+        timestamp: auth.timestamp,
+        nonce: auth.nonce
+      };
+      payloadHash = CryptoUtil.hashPayload(stripped);
+    }
 
     const storedPayload = await PayloadDatabase.getPayload(payloadHash);
     if (!storedPayload) return res.status(404).send('payload not found!');
@@ -97,7 +104,7 @@ class Processor {
   static verifyFingerprintPayload(receivedAuth, device) {
     const auth = receivedAuth;
 
-    return (auth.fingerprint == CryptoUtil.hashPayload(device.fingerprint));
+    return (auth.fingerprint == CryptoUtil.hash(device.fingerprint));
   }
 
   static verifyMacAddressPayload(receivedAuth, device) {
