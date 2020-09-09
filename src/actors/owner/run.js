@@ -31,6 +31,7 @@ async function main() {
 
 async function initiateSystemParameters() {
   try {
+    // TODO: change the store owner identity
     const [assigned, abi] = await Promise.all([
       Messenger.seedEtherToOwner(OWNER.address),
       Messenger.getContractAbi(),

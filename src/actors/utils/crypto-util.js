@@ -22,9 +22,14 @@ class CryptoUtil {
     return EthCrypto.createIdentity();
   }
 
-  static hashPayload(payload) {
+  /*static hashPayload(payload) {
     const string = JSON.stringify(payload);
     return EthCrypto.hash.keccak256(string);
+  }*/
+
+  static hashPayload(payload) {
+    const string = JSON.stringify(payload);
+    return crypto.createHash('sha256').update(string).digest('hex');
   }
 
   static signPayload(privateKey, payload) {
@@ -38,14 +43,24 @@ class CryptoUtil {
     return (address == signer);
   }
 
-  static signDigest(secretKey, payload) {
+  /*static signDigest(secretKey, payload) {
     const payloadHash = CryptoUtil.hashPayload(payload);
     return Base64.stringify(hmacSHA256(payloadHash, secretKey));
+  }*/
+
+  static signDigest(secretKey, payload) {
+    const string = JSON.stringify(payload);
+    return crypto.createHmac('sha256', secretKey).update(string).digest('hex');
   }
 
-  static verifyDigest(secretKey, signature, payload) {
+  /*static verifyDigest(secretKey, signature, payload) {
     let calculatedSignature = CryptoUtil.signDigest(secretKey, payload);
     return (signature === calculatedSignature);
+  }*/
+
+  static verifyDigest(secretKey, signature, payload) {
+    const digest = CryptoUtil.signDigest(secretKey, payload);
+    return (signature === digest);
   }
 
   static async encryptPayload(publicKey, payload) {
