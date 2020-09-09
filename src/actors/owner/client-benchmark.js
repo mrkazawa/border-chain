@@ -18,14 +18,33 @@ const {
 } = require('perf_hooks');
 
 // number of repetitions
-const NUMBER_OF_EPOCH = 1000;
+const NUMBER_OF_EPOCH = 50000;
 
 async function runMaster() {
   if (cluster.isMaster) {
     const numWorkers = os.cpus().length;
     log(`Setting up ${numWorkers} workers...`);
 
-    for (let i = 0; i < numWorkers; i += 1) cluster.fork();
+    const start = performance.now();
+    let done = 0;
+
+    for (let i = 0; i < numWorkers; i += 1) {
+      const worker = cluster.fork();
+
+      worker.on('message', msg => {
+        if (msg == 'done') done++;
+        if (done >= numWorkers) {
+          const end = performance.now();
+          const elapsed = end - start;
+          log(`ends in ${elapsed} milliseconds`);
+        
+          const opsPerSecond = NUMBER_OF_EPOCH / elapsed * 1000;
+          log(`${opsPerSecond} operations per second`);
+
+          done = 0;
+        }
+      });
+    }
 
     cluster.on('online', function (worker) {
       log(chalk.green(`Worker ${worker.process.pid} is online`));
@@ -47,8 +66,6 @@ async function runWorkers() {
 
     const contractAddress = abi.networks[ETH_NETWORK_ID].address;
     const contract = EthereumUtil.constructSmartContract(abi.abi, contractAddress);
-
-    const start = performance.now();
 
     while (true) {
       const auth = {
@@ -91,13 +108,8 @@ async function runWorkers() {
 
       if (nonce >= NUMBER_OF_EPOCH) break; // done, go out
     }
-  
-    const end = performance.now();
-    const elapsed = end - start;
-    log(`ends in ${elapsed} milliseconds`);
-  
-    const opsPerSecond = NUMBER_OF_EPOCH / elapsed * 1000;
-    log(`${opsPerSecond} operations per second`);
+
+    process.send('done');
   }
 }
 
