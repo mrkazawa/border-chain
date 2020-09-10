@@ -78,11 +78,24 @@ async function runWorkers(option) {
         const nonce = await SystemDatabase.getCurrentTxNonce();
         await processAccessAuthorization(chosenAccesses, service, gateway, nonce, contractAddress, contract);
         await SystemDatabase.incrementTxNonce();
-        
+
         if (nonce >= NUMBER_OF_EPOCH) break; // done, go out
       }
 
     } else if (option == CLIENT_OPTION.HANDSHAKE) {
+      const nonce = await SystemDatabase.getCurrentTxNonce();
+      const authHash = await processAccessAuthorization(chosenAccesses, service, gateway, nonce, contractAddress, contract);
+      await SystemDatabase.incrementTxNonce();
+
+      const handshakeNonce = CryptoUtil.randomValueBase64(64);
+      const mockResponse = await createGatewayMockResponse(handshakeNonce, gateway, service);
+      let epoch = 0;
+      while (true) {
+        await processHandshake(authHash, service, gateway, handshakeNonce, mockResponse);
+        epoch++;
+
+        if (epoch >= NUMBER_OF_EPOCH) break; // done, go out
+      }
 
     } else if (option == CLIENT_OPTION.RESOURCE) {
 
@@ -99,7 +112,7 @@ async function processAccessAuthorization(chosenAccesses, service, gateway, nonc
   const authHash = CryptoUtil.hashPayload(auth);
 
   const storeAuth = contract.methods.storePayload(authHash, service.address, gateway.address).encodeABI();
-  
+
   const storeAuthTx = {
     from: service.address,
     to: contractAddress,
@@ -124,6 +137,55 @@ async function processAccessAuthorization(chosenAccesses, service, gateway, nonc
   };
   const offChainPayload = await CryptoUtil.encryptPayload(gateway.publicKey, payloadForGateway);
   // do not send offChainPayload
+
+  return authHash;
+}
+
+async function createGatewayMockResponse(handshakeNonce, gateway, service) {
+  const exchange = {
+    timestamp: Date.now(),
+    nonce: handshakeNonce,
+    secret: CryptoUtil.randomValueBase64(128)
+  };
+
+  const exchangeSignature = CryptoUtil.signPayload(gateway.privateKey, exchange);
+  const payloadForService = {
+    payload: exchange,
+    payloadSignature: exchangeSignature
+  };
+  const response = await CryptoUtil.encryptPayload(service.publicKey, payloadForService);
+
+  return response;
+}
+
+async function processHandshake(payloadHash, service, gateway, handshakeNonce, mockResponse) {
+  const exchange = {
+    token: payloadHash,
+    publicKey: service.publicKey,
+    timestamp: Date.now(),
+    nonce: handshakeNonce,
+    secret: CryptoUtil.randomValueBase64(128)
+  };
+
+  const exchangeSignature = CryptoUtil.signPayload(service.privateKey, exchange);
+  const payloadForGateway = {
+    payload: exchange,
+    payloadSignature: exchangeSignature
+  };
+  const requestForGateway = await CryptoUtil.encryptPayload(gateway.publicKey, payloadForGateway);
+
+  // do not send requestForGateway
+  // we assume that the gateway send the mock response here
+  const responseDecrypted = await CryptoUtil.decryptPayload(service.privateKey, mockResponse);
+  const responsePayload = responseDecrypted.payload;
+  const responseSignature = responseDecrypted.payloadSignature;
+
+  if (exchange.nonce != responsePayload.nonce) throw new Error('exchange error: invalid nonce from gateway');
+
+  const isValid = CryptoUtil.verifyPayload(responseSignature, responsePayload, gateway.address);
+  if (!isValid) throw new Error('exchange error: invalid signature from gateway');
+
+  const secretKey = exchange.secret + responsePayload.secret;
 }
 
 function constructAuthorizationPayload(accesses) {
