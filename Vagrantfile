@@ -28,7 +28,7 @@ Vagrant.configure("2") do |config|
         when 2 # for iot domain owner
           vb.cpus = 4
         when 3 # for iot device
-          vb.cpus = 1
+          vb.cpus = 4
         when 4 # for isp
           vb.cpus = 1
         when 5 # for iot gateway

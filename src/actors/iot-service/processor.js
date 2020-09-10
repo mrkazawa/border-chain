@@ -16,7 +16,7 @@ const isBenchmarkingResource = () => {
 const CryptoUtil = require('../utils/crypto-util');
 const BenchUtil = require('../utils/bench-util');
 const Messenger = require('./messenger');
-const PayloadDatabase = require('./db/payload_db');
+const PayloadDatabase = require('./db/payload-db');
 
 const {
   GATEWAY_AUTHZ_URL,

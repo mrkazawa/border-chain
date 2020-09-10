@@ -5,8 +5,8 @@ const CryptoUtil = require('../utils/crypto-util');
 
 const Contract = require('./contract');
 const Messenger = require('./messenger');
-const PayloadDatabase = require('./db/payload_db');
-const SystemDatabase = require('./db/system_db');
+const PayloadDatabase = require('./db/payload-db');
+const SystemDatabase = require('./db/system-db');
 
 const SERVICE = CryptoUtil.createNewIdentity();
 
