@@ -36,7 +36,7 @@ Vagrant.configure("2") do |config|
         when 6 # for iot vendor
           vb.cpus = 1
         when 7 # for iot service
-          vb.cpus = 1
+          vb.cpus = 4
         end
       end
     end

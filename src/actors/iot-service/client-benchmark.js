@@ -24,7 +24,7 @@ const CLIENT_OPTION = {
 };
 
 // number of repetitions
-const NUMBER_OF_EPOCH = 10000;
+const NUMBER_OF_EPOCH = 100000;
 
 async function runMaster() {
   if (cluster.isMaster) {
@@ -69,7 +69,6 @@ async function runMaster() {
 async function runWorkers(option) {
   if (cluster.isWorker) {
     const [service, gateway, abi, chosenAccesses] = await getSystemSharedParameters();
-
     const contractAddress = abi.networks[ETH_NETWORK_ID].address;
     const contract = EthereumUtil.constructSmartContract(abi.abi, contractAddress);
 
@@ -83,21 +82,36 @@ async function runWorkers(option) {
       }
 
     } else if (option == CLIENT_OPTION.HANDSHAKE) {
-      const nonce = await SystemDatabase.getCurrentTxNonce();
+      let nonce = await SystemDatabase.getCurrentTxNonce();
       const authHash = await processAccessAuthorization(chosenAccesses, service, gateway, nonce, contractAddress, contract);
-      await SystemDatabase.incrementTxNonce();
 
       const handshakeNonce = CryptoUtil.randomValueBase64(64);
-      const mockResponse = await createGatewayMockResponse(handshakeNonce, gateway, service);
-      let epoch = 0;
-      while (true) {
-        await processHandshake(authHash, service, gateway, handshakeNonce, mockResponse);
-        epoch++;
+      const mockHandshakeResponse = await createGatewayMockHandshakeResponse(handshakeNonce, gateway, service);
 
-        if (epoch >= NUMBER_OF_EPOCH) break; // done, go out
+      while (true) {
+        await processHandshake(authHash, service, gateway, handshakeNonce, mockHandshakeResponse);
+        await SystemDatabase.incrementTxNonce();
+        nonce = await SystemDatabase.getCurrentTxNonce();
+
+        if (nonce >= NUMBER_OF_EPOCH) break; // done, go out
       }
 
     } else if (option == CLIENT_OPTION.RESOURCE) {
+      let nonce = await SystemDatabase.getCurrentTxNonce();
+      const authHash = await processAccessAuthorization(chosenAccesses, service, gateway, nonce, contractAddress, contract);
+      
+      const handshakeNonce = CryptoUtil.randomValueBase64(64);
+      const mockHandshakeResponse = await createGatewayMockHandshakeResponse(handshakeNonce, gateway, service);
+      const secretKey = await processHandshake(authHash, service, gateway, handshakeNonce, mockHandshakeResponse);
+
+      const mockResourceResponse = createGatewayMockResourceResponse(secretKey);
+      while (true) {
+        processResource(authHash, secretKey, handshakeNonce, mockResourceResponse);
+        await SystemDatabase.incrementTxNonce();
+        nonce = await SystemDatabase.getCurrentTxNonce();
+
+        if (nonce >= NUMBER_OF_EPOCH) break; // done, go out
+      }
 
     } else {
       throw new Error('invalid option!');
@@ -141,7 +155,7 @@ async function processAccessAuthorization(chosenAccesses, service, gateway, nonc
   return authHash;
 }
 
-async function createGatewayMockResponse(handshakeNonce, gateway, service) {
+async function createGatewayMockHandshakeResponse(handshakeNonce, gateway, service) {
   const exchange = {
     timestamp: Date.now(),
     nonce: handshakeNonce,
@@ -158,7 +172,7 @@ async function createGatewayMockResponse(handshakeNonce, gateway, service) {
   return response;
 }
 
-async function processHandshake(payloadHash, service, gateway, handshakeNonce, mockResponse) {
+async function processHandshake(payloadHash, service, gateway, handshakeNonce, mockHandshakeResponse) {
   const exchange = {
     token: payloadHash,
     publicKey: service.publicKey,
@@ -176,7 +190,7 @@ async function processHandshake(payloadHash, service, gateway, handshakeNonce, m
 
   // do not send requestForGateway
   // we assume that the gateway send the mock response here
-  const responseDecrypted = await CryptoUtil.decryptPayload(service.privateKey, mockResponse);
+  const responseDecrypted = await CryptoUtil.decryptPayload(service.privateKey, mockHandshakeResponse);
   const responsePayload = responseDecrypted.payload;
   const responseSignature = responseDecrypted.payloadSignature;
 
@@ -186,6 +200,35 @@ async function processHandshake(payloadHash, service, gateway, handshakeNonce, m
   if (!isValid) throw new Error('exchange error: invalid signature from gateway');
 
   const secretKey = exchange.secret + responsePayload.secret;
+
+  return secretKey;
+}
+
+function createGatewayMockResourceResponse(secretKey) {
+  const response = {
+    deviceAddress: 'deviceAddress',
+    temperature: 25
+  };
+  const encryptedResponse = CryptoUtil.encryptSymmetrically(secretKey, response);
+
+  return encryptedResponse;
+}
+
+function processResource(payloadHash, secretKey, handshakeNonce, mockResourceResponse) {
+  const request = {
+    token: payloadHash,
+    deviceAddress: 'deviceAddress',
+    type: 'temperature',
+    method: 'get'
+  };
+
+  const encryptedRequest = CryptoUtil.encryptSymmetrically(secretKey, request);
+  const payloadForGateway = {
+    nonce: handshakeNonce,
+    request: encryptedRequest
+  };
+
+  const decrypted = CryptoUtil.decryptSymmetrically(secretKey, mockResourceResponse);
 }
 
 function constructAuthorizationPayload(accesses) {
