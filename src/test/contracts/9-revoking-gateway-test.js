@@ -11,7 +11,7 @@ const truffleAssert = require('truffle-assertions');
  * The Domain Owner will try to revoke the previously authorized gateway.
  * If revoked, then underlying device and granted access become invalid.
  */
-//TODO: If gateway revoked, add test case for invalid access
+// TODO: If gateway revoked, add test case for invalid access
 describe('Gateway Authentication Part 3 -- Revoking Gateway Test', function () {
   contract('#revokeGateway() scenario 1', function (accounts) {
     const gatewayAddress = accounts[1];

@@ -17,7 +17,7 @@ const {
 
 class Processor {
   static async processPayloadAddedEvent(payloadHash, owner, auth, isp) {
-    if (await PayloadDatabase.isPayloadApproved(payloadHash)) log(chalk.yellow(`do nothing, we have already processed ${payloadHash} before`));
+    if (await PayloadDatabase.isPayloadStored(payloadHash)) log(chalk.yellow(`do nothing, we have already stored ${payloadHash} before`));
     else {
       await PayloadDatabase.updatePayloadStateToStored(payloadHash);
       await Processor.prepareAndSendToIsp(owner, auth, isp);

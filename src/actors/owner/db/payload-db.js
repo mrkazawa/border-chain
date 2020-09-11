@@ -94,6 +94,22 @@ class PayloadDatabase {
   }
 
   /**
+   * Check whether the given authentication payload is already stored.
+   * 
+   * @param {string} payloadHash payload hash string
+   */
+  static async isPayloadStored(payloadHash) {
+    try {
+      const value = await db.get(payloadHash);
+      if (!value || !value.isStored) return false;
+      return true;
+
+    } catch (err) {
+      throw new Error(`payload db: error when checking payload store state! ${err}`);
+    }
+  }
+
+  /**
    * Check whether the gateway authentication payload is already approved.
    * 
    * @param {string} payloadHash payload hash string

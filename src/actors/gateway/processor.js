@@ -29,7 +29,7 @@ class Processor {
   //------------------------- Device Authentication -------------------------//
 
   static async processAuthenticationPayloadAddedEvent(payloadHash, target, gateway, approver) {
-    if (await PayloadDatabase.isPayloadApproved(payloadHash)) log(chalk.yellow(`do nothing, we have already processed ${payloadHash} before`));
+    if (await PayloadDatabase.isPayloadStored(payloadHash)) log(chalk.yellow(`do nothing, we have already stored ${payloadHash} before`));
     else {
       await PayloadDatabase.updatePayloadStateToStored(payloadHash, gateway.address, target, approver);
       await Processor.prepareAndSendToVendor(payloadHash, gateway);

@@ -25,9 +25,8 @@ const {
 } = require('./config');
 
 class Processor {
-  // TODO: Change isPayloadApproved to isPayloadStored for all updatePayloadStateToStored
   static async processPayloadAddedEvent(payloadHash, service, auth, gateway) {
-    if (await PayloadDatabase.isPayloadApproved(payloadHash)) log(chalk.yellow(`do nothing, we have already processed ${payloadHash} before`));
+    if (await PayloadDatabase.isPayloadStored(payloadHash)) log(chalk.yellow(`do nothing, we have already stored ${payloadHash} before`));
     else {
       await PayloadDatabase.updatePayloadStateToStored(payloadHash);
       await Processor.prepareAndSendToGateway(service, auth, gateway);
