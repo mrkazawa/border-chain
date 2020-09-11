@@ -1,7 +1,5 @@
 const EthCrypto = require('eth-crypto');
 const crypto = require('crypto');
-const hmacSHA256 = require('crypto-js/hmac-sha256');
-const Base64 = require('crypto-js/enc-base64');
 
 // for symmetric encryption and decryption
 const algorithm = 'aes256';
@@ -42,20 +40,10 @@ class CryptoUtil {
     return (address == signer);
   }
 
-  /*static signDigest(secretKey, payload) {
-    const payloadHash = CryptoUtil.hashPayload(payload);
-    return Base64.stringify(hmacSHA256(payloadHash, secretKey));
-  }*/
-
   static signDigest(secretKey, payload) {
     const string = JSON.stringify(payload);
     return crypto.createHmac('sha256', secretKey).update(string).digest('hex');
   }
-
-  /*static verifyDigest(secretKey, signature, payload) {
-    let calculatedSignature = CryptoUtil.signDigest(secretKey, payload);
-    return (signature === calculatedSignature);
-  }*/
 
   static verifyDigest(secretKey, signature, payload) {
     const digest = CryptoUtil.signDigest(secretKey, payload);

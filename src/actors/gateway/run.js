@@ -13,7 +13,7 @@ const EthereumUtil = require('../utils/ethereum-util');
 const Messenger = require('./messenger');
 const Processor = require('./processor');
 const Contract = require('./contract');
-const SystemDatabase = require('./db/system_db');
+const SystemDatabase = require('./db/system-db');
 
 async function runMaster() {
   if (cluster.isMaster) {

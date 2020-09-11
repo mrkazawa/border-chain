@@ -2,8 +2,8 @@ const chalk = require('chalk');
 const log = console.log;
 
 const CryptoUtil = require('../utils/crypto-util');
-const PayloadDatabase = require('./db/payload_db');
-const SystemDatabase = require('./db/system_db');
+const PayloadDatabase = require('./db/payload-db');
+const SystemDatabase = require('./db/system-db');
 
 const {
   DEVICE_AUTHN_OPTION

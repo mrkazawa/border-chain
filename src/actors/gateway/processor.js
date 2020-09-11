@@ -15,11 +15,11 @@ const CryptoUtil = require('../utils/crypto-util');
 const BenchUtil = require('../utils/bench-util');
 const Messenger = require('./messenger');
 
-const PayloadDatabase = require('./db/payload_db');
-const TokenDatabase = require('./db/token_db');
-const AccessDatabase = require('./db/access_db');
-const NonceDatabase = require('./db/nonce_db');
-const SystemDatabase = require('./db/system_db');
+const PayloadDatabase = require('./db/payload-db');
+const TokenDatabase = require('./db/token-db');
+const AccessDatabase = require('./db/access-db');
+const NonceDatabase = require('./db/nonce-db');
+const SystemDatabase = require('./db/system-db');
 
 const {
   VENDOR_AUTHN_URL

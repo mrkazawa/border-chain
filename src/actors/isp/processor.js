@@ -2,9 +2,9 @@ const chalk = require('chalk');
 const log = console.log;
 
 const CryptoUtil = require('../utils/crypto-util');
-const PayloadDatabase = require('./db/payload_db');
-const UserDatabase = require('./db/user_db');
-const SystemDatabase = require('./db/system_db');
+const PayloadDatabase = require('./db/payload-db');
+const UserDatabase = require('./db/user-db');
+const SystemDatabase = require('./db/system-db');
 
 class Processor {
   static async processPayloadAddedEvent(payloadHash, sender, target, approver) {
