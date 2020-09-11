@@ -12,14 +12,14 @@ class PayloadDatabase {
    * Store new access authorization payload.
    * 
    * @param {string} payloadHash payload hash string
-   * @param {string} sender blockchain address of authorization sender
+   * @param {string} source blockchain address of authorization sender
    * @param {string} target blockchain address of authorization target
    * @param {string} approver blockchain address of authorization approver
    */
-  static async storeNewPayload(payloadHash, sender, target, approver) {
+  static async storeNewPayload(payloadHash, source, target, approver) {
     try {
       const value = {
-        sender: sender,
+        source: source,
         target: target,
         approver: approver,
         isStored: false,

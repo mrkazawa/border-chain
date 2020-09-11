@@ -45,14 +45,14 @@ class Processor {
     const storedPayload = await PayloadDatabase.getPayload(payloadHash);
     if (!storedPayload) return res.status(404).send('payload not found!');
 
-    const sender = storedPayload.sender;
+    const source = storedPayload.source;
     const isApproved = storedPayload.isApproved;
     if (isApproved) return res.status(401).send('replay? we already process this before!');
 
-    const isValid = CryptoUtil.verifyPayload(payloadSignature, payload, sender);
+    const isValid = CryptoUtil.verifyPayload(payloadSignature, payload, source);
     if (!isValid) return res.status(401).send('invalid signature!');
 
-    const user = await UserDatabase.getUser(sender);
+    const user = await UserDatabase.getUser(source);
     if (!user) return res.status(404).send('user not found!');
     if (
       user.username != payload.username ||

@@ -24,7 +24,7 @@ const CLIENT_OPTION = {
 };
 
 // number of repetitions
-const NUMBER_OF_EPOCH = 100000;
+const NUMBER_OF_EPOCH = 1000;
 
 async function runMaster() {
   if (cluster.isMaster) {

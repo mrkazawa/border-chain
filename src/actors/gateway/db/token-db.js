@@ -13,14 +13,14 @@ class TokenDatabase {
    * Store new authorization payload that will become the access token.
    * 
    * @param {string} payloadHash payload hash string
-   * @param {string} sender blockchain address of authorization sender
+   * @param {string} source blockchain address of authorization sender
    * @param {string} target blockchain addresss of authorization target
    * @param {string} approver blockchian address of authorization approver
    */
-  static async storeNewToken(payloadHash, sender, target, approver) {
+  static async storeNewToken(payloadHash, source, target, approver) {
     try {
       const value = {
-        sender: sender,
+        source: source,
         target: target,
         approver: approver,
         isStored: true,

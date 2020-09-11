@@ -152,14 +152,14 @@ class Processor {
     if (!storedToken) return res.status(404).send('payload not found!');
 
     // TODO: Change sender to source for all
-    const sender = storedToken.sender;
+    const source = storedToken.source;
     const isApproved = storedToken.isApproved;
     if (isApproved) return res.status(401).send('replay? we already process this before!');
 
-    const isValid = CryptoUtil.verifyPayload(payloadSignature, payload, sender);
+    const isValid = CryptoUtil.verifyPayload(payloadSignature, payload, source);
     if (!isValid) return res.status(401).send('invalid signature!');
 
-    const storedAccesses = await AccessDatabase.getAccess(sender);
+    const storedAccesses = await AccessDatabase.getAccess(source);
     if (!storedAccesses) return res.status(404).send('accesses for this address is not found!');
 
     const accesses = payload.accesses;
@@ -198,7 +198,7 @@ class Processor {
     else await NonceDatabase.storeNewNonce(nonce);
 
     const storedToken = await TokenDatabase.getTokenObject(token);
-    const sender = storedToken.sender;
+    const source = storedToken.source;
     const isApproved = storedToken.isApproved;
     const isRevoked = storedToken.isRevoked;
     const expiryTime = storedToken.expiryTime;
@@ -210,7 +210,7 @@ class Processor {
       (expiryTime * 1000 < Date.now())
     ) return res.status(401).send('invalid token!');
 
-    const isValid = CryptoUtil.verifyPayload(payloadSignature, payload, sender);
+    const isValid = CryptoUtil.verifyPayload(payloadSignature, payload, source);
     if (!isValid) return res.status(401).send('invalid signature!');
 
     const exchange = {

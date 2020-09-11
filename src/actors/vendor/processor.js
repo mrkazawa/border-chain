@@ -50,7 +50,7 @@ class Processor {
     const storedPayload = await PayloadDatabase.getPayload(payloadHash);
     if (!storedPayload) return res.status(404).send('payload not found!');
 
-    const sender = storedPayload.sender;
+    const source = storedPayload.source;
     const target = storedPayload.target;
     const isApproved = storedPayload.isApproved;
     if (isApproved) return res.status(401).send('replay? we already process this before!');
@@ -58,7 +58,7 @@ class Processor {
     const isOurDevice = CryptoUtil.verifyPayload(deviceSignature, target, vendor.address);
     if (!isOurDevice) return res.status(401).send('invalid signature: not our device!');
 
-    const isValidGateway = CryptoUtil.verifyPayload(payloadSignature, payload, sender);
+    const isValidGateway = CryptoUtil.verifyPayload(payloadSignature, payload, source);
     if (!isValidGateway) return res.status(401).send('invalid signature: gateway address is not the same with the one in the blockchain!');
 
     const isPayloadValid = Processor.verifyDeviceAuthPayload(authOption, auth, target, device);

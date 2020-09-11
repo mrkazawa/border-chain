@@ -11,14 +11,14 @@ class PayloadDatabase {
    * Store new device authentication payload.
    * 
    * @param {string} payloadHash payload hash string
-   * @param {string} sender blockchain address of authentication sender
+   * @param {string} source blockchain address of authentication sender
    * @param {string} target blockchain addresss of authentication target
    * @param {string} approver blockchian address of authentication approver
    */
-  static async storeNewPayload(payloadHash, sender, target, approver) {
+  static async storeNewPayload(payloadHash, source, target, approver) {
     try {
       const value = {
-        sender: sender,
+        source: source,
         target: target,
         approver: approver,
         isStored: true,
