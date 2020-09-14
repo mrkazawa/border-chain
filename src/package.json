@@ -28,6 +28,7 @@
     "gateway-benchmark-gateway": "BENCHMARKING_GATEWAY=true node actors/gateway/run",
     "gateway-benchmark-handshake": "BENCHMARKING_HANDSHAKE=true node actors/gateway/run",
     "gateway-benchmark-vendor": "BENCHMARKING_VENDOR=true node actors/gateway/run",
+    "gateway-client-benchmark": "node actors/gateway/client-benchmark",
     "service": "node actors/iot-service/run",
     "service-benchmark-access": "BENCHMARKING_ACCESS=true node actors/iot-service/run",
     "service-benchmark-handshake": "BENCHMARKING_HANDSHAKE=true node actors/iot-service/run",

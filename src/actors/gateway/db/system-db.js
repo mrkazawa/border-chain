@@ -23,6 +23,19 @@ class SystemDatabase {
   }
 
   /**
+   * Store the IoT device authentication payload (ONLY FOR BENCHMARKING).
+   * 
+   * @param {object} devicePayload the authentication payload from IoT device
+   */
+  static async storeDevicePayload(devicePayload) {
+    try {
+      await db.set('devicePayload', devicePayload);
+    } catch (err) {
+      throw new Error(`system db: error when storing device payload! ${err}`);
+    }
+  }
+
+  /**
    * Store the ABI of the smart contract.
    * 
    * @param {object} contractAbi smart contract ABI object
@@ -56,6 +69,17 @@ class SystemDatabase {
       return await db.get('gateway');
     } catch (err) {
       throw new Error(`system db: error when getting gateway identity! ${err}`);
+    }
+  }
+
+  /**
+   * Get the details of IoT device authentication payload (ONLY FOR BENCHMARKING).
+   */
+  static async getDevicePayload() {
+    try {
+      return await db.get('devicePayload');
+    } catch (err) {
+      throw new Error(`system db: error when getting device payload! ${err}`);
     }
   }
 

@@ -19,13 +19,13 @@ class Processor {
     switch (option) {
       case DEVICE_AUTHN_OPTION.PKSIG:
         return Processor.constructPublicKeyPayload(device);
-  
+
       case DEVICE_AUTHN_OPTION.HMAC:
         return Processor.constructSecretKeyPayload(device);
-  
+
       case DEVICE_AUTHN_OPTION.FINGERPRINT:
         return Processor.constructFingerprintPayload(device);
-  
+
       case DEVICE_AUTHN_OPTION.MAC:
         return Processor.constructMacPayload(device);
     }
@@ -36,44 +36,44 @@ class Processor {
       timestamp: Date.now(),
       nonce: CryptoUtil.randomValueBase64(64)
     };
-  
+
     const authSignature = CryptoUtil.signPayload(device.privateKey, auth);
     const authHash = CryptoUtil.hashPayload(auth);
     const authPayload = {
       auth: auth,
       authSignature: authSignature
     };
-    
+
     return [authHash, authPayload];
   }
-  
+
   static constructSecretKeyPayload(device) {
     const auth = {
       timestamp: Date.now(),
       nonce: CryptoUtil.randomValueBase64(64)
     };
-  
+
     const authSignature = CryptoUtil.signDigest(device.secretKey, auth);
     const authHash = CryptoUtil.hashPayload(auth);
     const authPayload = {
       auth: auth,
       authSignature: authSignature
     }
-  
+
     return [authHash, authPayload];
   }
-  
+
   static constructFingerprintPayload(device) {
     let auth = {
       timestamp: Date.now(),
       nonce: CryptoUtil.randomValueBase64(64)
     }
     const authHash = CryptoUtil.hashPayload(auth);
-    auth.fingerprint =  CryptoUtil.hash(device.fingerprint);
-  
+    auth.fingerprint = CryptoUtil.hash(device.fingerprint);
+
     return [authHash, auth];
   }
-  
+
   static constructMacPayload(device) {
     let auth = {
       timestamp: Date.now(),
@@ -81,7 +81,7 @@ class Processor {
     }
     const authHash = CryptoUtil.hashPayload(auth);
     auth.mac = device.mac;
-    
+
     return [authHash, auth];
   }
 

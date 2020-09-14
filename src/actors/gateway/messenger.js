@@ -2,6 +2,7 @@ const HttpUtil = require('../utils/http-util');
 
 const {
   ADMIN_GATEWAY_INFO_URL,
+  ADMIN_DEVICE_INFO_URL,
   ADMIN_ABI_URL,
   ADMIN_SEED_ETHER_URL,
   VENDOR_AUTHN_URL,
@@ -26,6 +27,13 @@ class Messenger {
 
   static async getGatewayInfo() {
     return await HttpUtil.get(ADMIN_GATEWAY_INFO_URL);
+  }
+
+  /**
+   * Get device info from admin (ONLY FOR BENCHMARKING).
+   */
+  static async getDeviceInfo() {
+    return await HttpUtil.get(ADMIN_DEVICE_INFO_URL);
   }
 }
 

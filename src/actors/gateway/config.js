@@ -5,6 +5,7 @@ const ADMIN_BASE_URL = 'http://' + ADMIN_HOSTNAME + ':' + ADMIN_PORT;
 const ADMIN_ABI_URL = ADMIN_BASE_URL + '/contract-abi';
 const ADMIN_SEED_ETHER_URL = ADMIN_BASE_URL + '/seed-ether';
 const ADMIN_GATEWAY_INFO_URL = ADMIN_BASE_URL + '/gateway';
+const ADMIN_DEVICE_INFO_URL = ADMIN_BASE_URL + '/device'; // only for BENCHMARKING
 
 // for vendor
 const VENDOR_HOSTNAME = 'actor6.local';
@@ -19,6 +20,7 @@ module.exports = {
   ADMIN_ABI_URL,
   ADMIN_SEED_ETHER_URL,
   ADMIN_GATEWAY_INFO_URL,
+  ADMIN_DEVICE_INFO_URL,
   VENDOR_AUTHN_URL,
   ETH_NETWORK_ID
 };
