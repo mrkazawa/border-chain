@@ -57,7 +57,7 @@ class CryptoUtil {
   }
 
   static async decryptPayload(privateKey, payload) {
-    const encrypted = EthCrypto.cipher.parse(payload);
+    const encrypted = await EthCrypto.cipher.parse(payload);
     const decrypted = await EthCrypto.decryptWithPrivateKey(privateKey, encrypted);
     return JSON.parse(decrypted);
   }

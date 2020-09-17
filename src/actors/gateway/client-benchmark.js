@@ -18,7 +18,7 @@ const {
 } = require('perf_hooks');
 
 // number of repetitions
-const NUMBER_OF_EPOCH = 50000;
+const NUMBER_OF_EPOCH = 100000;
 
 async function runMaster() {
   if (cluster.isMaster) {
