@@ -3,15 +3,15 @@ const os = require('os');
 const chalk = require('chalk');
 const log = console.log;
 
-const CryptoUtil = require('../utils/crypto-util');
-const EthereumUtil = require('../utils/ethereum-util');
-const Messenger = require('./messenger');
-const PayloadDatabase = require('./db/payload-db');
-const SystemDatabase = require('./db/system-db');
+const CryptoUtil = require('../../actors/utils/crypto-util');
+const EthereumUtil = require('../../actors/utils/ethereum-util');
+const Messenger = require('../../actors/iot-service/messenger');
+const PayloadDatabase = require('../../actors/iot-service/db/payload-db');
+const SystemDatabase = require('../../actors/iot-service/db/system-db');
 
 const {
   ETH_NETWORK_ID
-} = require('./config');
+} = require('../../actors/iot-service/config');
 
 const {
   performance

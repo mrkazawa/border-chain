@@ -3,9 +3,9 @@ const os = require('os');
 const chalk = require('chalk');
 const log = console.log;
 
-const Processor = require('./processor');
-const Messenger = require('./messenger');
-const SystemDatabase = require('./db/system-db');
+const Processor = require('../../actors/device/processor');
+const Messenger = require('../../actors/device/messenger');
+const SystemDatabase = require('../../actors/device/db/system-db');
 
 const {
   performance
