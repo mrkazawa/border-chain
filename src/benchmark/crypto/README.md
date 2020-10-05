@@ -13,15 +13,15 @@ We use the following crypto tools:
 
 We have several benchmarking scenarios.
 
-1. Benchmark the `hash`, which generates KECCAK-256 hash using `eth-crypto` module.
-2. Benchmark the `pk-sign`, which is the public key signaturing using ECDSA of `eth-crypto` module.
-3. Benchmark the `pk-verify`, verifies an ECDSA signature of `eth-crypto` module.
-4. Benchmark the `sk-sign`, produces a HMAC signature using `node-js-crypto` module.
-5. Benchmark the `sk-verify`, which validates an HMAC signature of `node-js-crypto` module.
-6. Benchmark the `pk-encrypt`, public key encryption using `eth-crypto` module.
-7. Benchmark the `pk-decrypt`, decrypts public key encryption payload of `eth-crypto` module.
+1. Benchmark the `hash`, which generates KECCAK-256 hash using the `eth-crypto` module.
+2. Benchmark the `pk-sign`, which is the public key signature using ECDSA of the `eth-crypto` module.
+3. Benchmark the `pk-verify`, verifies an ECDSA signature of the `eth-crypto` module.
+4. Benchmark the `sk-sign`, produces an HMAC signature using the `node-js-crypto` module.
+5. Benchmark the `sk-verify`, which validates an HMAC signature of the `node-js-crypto` module.
+6. Benchmark the `pk-encrypt`, public-key encryption using the `eth-crypto` module.
+7. Benchmark the `pk-decrypt`, decrypts public key encryption payload of the `eth-crypto` module.
 8. Benchmark the `sk-encrypt`, AES-256 symmetric encryption using `node-js-crypto` module.
-9. Benchmark the `sk-decrypt`, which decrypts the AES-256 encrypted payload of `node-js-crypto` module.
+9. Benchmark the `sk-decrypt`, decrypting the AES-256 encrypted payload of the `node-js-crypto` module.
 
 First, we run the `benchmark-server`.
 The server is based on [express](https://www.npmjs.com/package/express) module.
@@ -63,5 +63,5 @@ vagrant@actor3:~$ cd ~/src
 vagrant@actor3:~$ cat result.csv
 ```
 
-**Note**: The result of the benchmark will vary depending on the host machines, where you perform the benchmark.
+**Note**: The benchmark result will vary depending on the host machines where you perform the benchmark.
 Moreover, our benchmark can leverage the multi CPUs that the guest machines have.
