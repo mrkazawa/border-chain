@@ -9,7 +9,7 @@ We use the following crypto tools:
 - For blockchain-related stuffs, we use [eth-crypto](https://www.npmjs.com/package/eth-crypto).
 - For non-blockchain-related things, we employ [node-js-crypto](https://nodejs.org/docs/latest-v10.x/api/crypto.html).
 
-## Running ##
+## Running Benchmark ##
 
 We have several benchmarking scenarios.
 
@@ -26,9 +26,10 @@ We have several benchmarking scenarios.
 First, we run the `benchmark-server`.
 The server is based on [express](https://www.npmjs.com/package/express) module.
 
-```shell
-cd ~/border-chain/src
-node benchmark/crypto/server.js
+```console
+# open new terminal
+vagrant@actor4:~$ cd ~/src
+vagrant@actor4:~$ node benchmark/crypto/server.js
 ```
 
 Then, in another machine, run the `benchmark-client`.
@@ -41,25 +42,26 @@ const SERVER_PORT = 3000;
 
 Then, run the [autocannon](https://www.npmjs.com/package/autocannon) instance.
 
-```shell
-cd ~/border-chain/src
-bash benchmark/crypto/run.sh 1 5 # to run hash operation for 5 iterations
-bash benchmark/crypto/run.sh 2 15 # to run pk-sign operation for 15 iterations
-bash benchmark/crypto/run.sh 3 15 # to run pk-verify operation for 15 iterations
-bash benchmark/crypto/run.sh 4 15 # to run sk-sign operation for 15 iterations
-bash benchmark/crypto/run.sh 5 15 # to run sk-verify operation for 15 iterations
-bash benchmark/crypto/run.sh 6 10 # to run pk-encrypt operation for 10 iterations
-bash benchmark/crypto/run.sh 7 10 # to run pk-decrypt operation for 10 iterations
-bash benchmark/crypto/run.sh 8 10 # to run sk-encrypt operation for 10 iterations
-bash benchmark/crypto/run.sh 9 10 # to run sk-decrypt operation for 10 iterations
+```console
+# open new terminal
+vagrant@actor3:~$ cd ~/src
+vagrant@actor3:~$ bash benchmark/crypto/run.sh 1 5 # to run hash operation for 5 iterations
+vagrant@actor3:~$ bash benchmark/crypto/run.sh 2 15 # to run pk-sign operation for 15 iterations
+vagrant@actor3:~$ bash benchmark/crypto/run.sh 3 15 # to run pk-verify operation for 15 iterations
+vagrant@actor3:~$ bash benchmark/crypto/run.sh 4 15 # to run sk-sign operation for 15 iterations
+vagrant@actor3:~$ bash benchmark/crypto/run.sh 5 15 # to run sk-verify operation for 15 iterations
+vagrant@actor3:~$ bash benchmark/crypto/run.sh 6 10 # to run pk-encrypt operation for 10 iterations
+vagrant@actor3:~$ bash benchmark/crypto/run.sh 7 10 # to run pk-decrypt operation for 10 iterations
+vagrant@actor3:~$ bash benchmark/crypto/run.sh 8 10 # to run sk-encrypt operation for 10 iterations
+vagrant@actor3:~$ bash benchmark/crypto/run.sh 9 10 # to run sk-decrypt operation for 10 iterations
 ```
 
 We can get the benchmark result from the `result.csv` file.
 
-```shell
-cd ~/border-chain/src
-cat result.csv
+```console
+vagrant@actor3:~$ cd ~/src
+vagrant@actor3:~$ cat result.csv
 ```
 
-Please note that the result of the benchmark will vary depending on the host machines, where you perform the benchmark.
-Moreover, our benchmark can leverage the multi CPUs that the machine has.
+**Note**: The result of the benchmark will vary depending on the host machines, where you perform the benchmark.
+Moreover, our benchmark can leverage the multi CPUs that the guest machines have.
