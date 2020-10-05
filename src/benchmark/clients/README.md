@@ -5,35 +5,37 @@ This document elaborates how to measure the performance of the client when perfo
 ## Setup ##
 
 You need to have all of the entities up and running in each of the respective VMs.
-We assume that you have successfully run all of our normal scenarios without issues.
+We assume that you have successfully run all of our normal scenarios, described [here](), without any issues.
 
 Run the ethereum network and admin using the following command.
-We assume that we are in `src` directory of `cd ~/border-chain/src`.
 
-```shell
-# in `actor1` VM, run ganache
-npm run eth-network
+```console
+# open new terminal
+vagrant@actor1:~$ cd ~/src
+vagrant@actor1:~$ npm run eth-network # run ganache
 
-# open another terminal in `actor1` VM, and run admin
-npm run admin
+# open new terminal
+vagrant@actor1:~$ cd ~/src
+vagrant@actor1:~$ npm run admin
 ```
 
-## Running ##
+## Running Benchmark ##
 
-We have three big scenarios.
+We have three client benchmarking scenarios.
 
 ### 1. Gateway Authentication ###
 
 In this scenario, we want to measure the performance of the `owner` during gateway authentication request.
 Run the following commands.
-We assume that we are in `src` directory of `cd ~/border-chain/src`.
 
-```shell
-# in `actor4` VM, run isp
-npm run isp
+```console
+# open new terminal
+vagrant@actor4:~$ cd ~/src
+vagrant@actor4:~$ npm run isp
 
-# in `actor2` VM, run the owner benchmark
-npm run owner-client-benchmark
+# open new terminal
+vagrant@actor2:~$ cd ~/src
+vagrant@actor2:~$ npm run owner-client-benchmark
 ```
 
 The result will be shown directly in the console.
@@ -42,58 +44,67 @@ The result will be shown directly in the console.
 
 In this second scenario, we benchmark the `device` and `gateway` as clients of our device authentication procedure.
 To do so, run the following commands.
-We assume that we are in `src` directory of `cd ~/border-chain/src`.
 
-```shell
-# in `actor4` VM, run isp
-npm run isp
+```console
+# open new terminal
+vagrant@actor4:~$ cd ~/src
+vagrant@actor4:~$ npm run isp
 
-# in `actor2` VM, run the owner
-npm run owner
+# open new terminal
+vagrant@actor2:~$ cd ~/src
+vagrant@actor2:~$ npm run owner
 
-# in `actor6` VM, run the vendor
-npm run vendor
+# open new terminal
+vagrant@actor6:~$ cd ~/src
+vagrant@actor6:~$ npm run vendor
 
-# in `actor5` VM, run the gateway benchmark
-npm run gateway-client-benchmark
-# otherwise, run the normal gateway to benchmark the device
-npm run gateway
+# open new terminal
+vagrant@actor5:~$ cd ~/src
+# to run the benchmark for gateway
+vagrant@actor5:~$ npm run gateway-client-benchmark
+# otherwise
+vagrant@actor5:~$ npm run gateway
 
-# in `actor2` VM, run the device benchmark
-npm run device-pksig-client-benchmark # for PK-SIG scenario
-npm run device-sksig-client-benchmark # for SK-SIG scenario
-npm run device-fingerprint-client-benchmark # for FINGERPRINTING scenario
-npm run device-mac-client-benchmark # for MAC-ADDRESS scenario
+# open new terminal, run the benchmark for device
+vagrant@actor3:~$ cd ~/src
+vagrant@actor3:~$ npm run device-pksig-client-benchmark # for PK-SIG scenario
+vagrant@actor3:~$ npm run device-sksig-client-benchmark # for SK-SIG scenario
+vagrant@actor3:~$ npm run device-fingerprint-client-benchmark # for FINGERPRINTING scenario
+vagrant@actor3:~$ npm run device-mac-client-benchmark # for MAC-ADDRESS scenario
 ```
 
 Results will be shown directly in the console.
 
-### 3. Access Authorization ###
+### 3. Access Authorization, Handshake, and Accessing Resource ###
 
-In our final scenario, we benchmark the `iot-service` as clients of our access authorization, as well as, secure channel handshake procedures.
-To do so, run the following commands.
-We assume that we are in `src` directory of `cd ~/border-chain/src`.
+In our final scenario, we benchmark the `iot-service` as client of our access authorization, as well as, secure channel handshake procedures.
+Run the following commands.
 
-```shell
-# in `actor4` VM, run isp
-npm run isp
+```console
+# open new terminal
+vagrant@actor4:~$ cd ~/src
+vagrant@actor4:~$ npm run isp
 
-# in `actor2` VM, run the owner
-npm run owner
+# open new terminal
+vagrant@actor2:~$ cd ~/src
+vagrant@actor2:~$ npm run owner
 
-# in `actor6` VM, run the vendor
-npm run vendor
+# open new terminal
+vagrant@actor6:~$ cd ~/src
+vagrant@actor6:~$ npm run vendor
 
-# in `actor5` VM, run the gateway
-npm run gateway
+# open new terminal
+vagrant@actor5:~$ cd ~/src
+vagrant@actor5:~$ npm run gateway
 
-# in `actor7` VM, run the service benchmark
-npm run service-client-benchmark-access # for access authorization
-npm run service-client-benchmark-handshake # for secret key handshake
-npm run service-client-benchmark-resource # for accessing resource using secret key
+# open new terminal, run the service benchmark
+vagrant@actor7:~$ cd ~/src
+vagrant@actor7:~$ npm run service-client-benchmark-access # for access authorization
+vagrant@actor7:~$ npm run service-client-benchmark-handshake # for secret key handshake
+vagrant@actor7:~$ npm run service-client-benchmark-resource # for accessing resource using secret key
 ```
 
 Results will be shown directly in the console.
 
 **Note**: The result of the benchmark will vary depending on the host machines, where you perform the benchmark.
-Moreover, our benchmark can leverage the multi CPUs that the machine has.
+Moreover, our benchmark can leverage the multi CPUs that the guest machines have.
