@@ -1,6 +1,6 @@
-# Nemesis #
+# BorderChain #
 
-This repository is the implementation of our access control framework from the paper "Nemesis: ", which is published [here]().
+This repository is the implementation from our paper "BorderChain: Blockchain-Based Access Control Framework for the Internet of Things Endpoint", which is published [here]().
 
 ## Installation ##
 
@@ -11,22 +11,24 @@ All of the required softwares and tools has been included in the `Vagrantfile` a
 
 ```console
 foo@ubuntu:~$ cd ~/
-foo@ubuntu:~$ git clone https://github.com/mrkazawa/nemesis.git
-foo@ubuntu:~$ cd ~/nemesis
+foo@ubuntu:~$ git clone https://github.com/mrkazawa/border-chain.git
+foo@ubuntu:~$ cd ~/border-chain
 
 foo@ubuntu:~$ vagrant up # if it is our first time, this will take some times
 foo@ubuntu:~$ vagrant rsync-auto # this is to synchronize the code from your git to the deployed VMs
 
-# open one terminal each to SSH to each of the following VMs.
+# open eight new terminals and SSH to each of the following VMs.
+foo@ubuntu:~$ vagrant ssh actor1 # for ethereum
 foo@ubuntu:~$ vagrant ssh actor1 # for admin
 foo@ubuntu:~$ vagrant ssh actor2 # for owner
 foo@ubuntu:~$ vagrant ssh actor3 # for device
 foo@ubuntu:~$ vagrant ssh actor4 # for isp
 foo@ubuntu:~$ vagrant ssh actor5 # for gateway
 foo@ubuntu:~$ vagrant ssh actor6 # for vendor
+foo@ubuntu:~$ vagrant ssh actor7 # for iot-service
 ```
 
-Inside all of the SSH instances, we need to install all of the Node JS dependencies.
+Inside all of the SSH-ed instances, we need to install all of the Node JS dependencies.
 Run this in all of SSH-ed instances.
 
 ```console
@@ -36,136 +38,143 @@ vagrant@actor1:~$ npm install
 vagrant@actor1:~$ npm run-script # to show all available NPM commands
 ```
 
-Repeat the above command for `actor2` to `actor6`.
-
+Repeat the above command for the rest of the VMs, from `actor2` to `actor7`.
 Other useful commands,
 
 ```console
-foo@ubuntu:~$ cd ~/nemesis
+foo@ubuntu:~$ cd ~/border-chain
 foo@ubuntu:~$ vagrant reload # to restart VM
 foo@ubuntu:~$ vagrant halt # to shutdwon VM
 foo@ubuntu:~$ vagrant destroy -f # to completely delete VM
 ```
 
-- - - -
+## Running Ethereum and Admin ##
 
-## Gateway and Device Authentication ##
+We need an a trusted mediator called `admin` to bootstrap our environment.
+This entity exists only for development purposes and should not be available in the production case.
+The roles of `admin` are as follows.
 
-In this scenario, we show you how to use our gateway and device authentication.
-Note that, the following commands has to be performed in order.
+- First, we use it as the governor of our blockchain.
+The `admin` will run the Ethereum network and distribute the contract ABI to all of other IoT entities in our environment, which are the blockchain nodes.
+The `admin` also seed money to the participant blockchain address.
 
-### 0. Running the Admin ###
-
-We need the admin for many purposes.
-
-- First, we use admin as the governor of our blockchain.
-The admin will run the Ethereum network and distribute the contract ABI to all of the pariticipants.
-The admin also seed money to the participant blockchain address.
-
-- Second, we use admin as a broker to relay information between instances.
-For example, owner relays the gateway's gateway private key, public key, as well as the address to the gateway through admin.
-This broker is used only for simulation purposes.
-We will not use this in our environment.
+- Second, we use `admin` as a broker to relay information between instances.
+For example, `owner` relays the `gateway`'s private key, public key, as well as its blockchain address to the `gateway`'s machine through `admin`.
 
 ```console
 vagrant@actor1:~$ cd ~/src
-vagrant@actor1:~$ npm run eth-network # running the ethereum network in ganache
+vagrant@actor1:~$ npm run eth-network # run the ethereum network using ganache
 
 # open another terminal, then
 vagrant@actor1:~$ cd ~/src
-vagrant@actor1:~$ npm run admin # running the truffle deploy and the admin server
+vagrant@actor1:~$ npm run admin # run the truffle deploy and the admin server
 ```
 
-### 1. Running the ISP ###
+## Running Our Access Control ##
 
-The ISP authentication server provides the authentication for domain owner.
-The owner has to authenticate his gateway by providing his credentials, his gateway address, and legitimate IP to the ISP.
-When the authentication is successful, the ISP will instruct the smart contract to insert the owner's gateway address to its trusted list.
+Our proposed access control contains of four parts: gateway (or endpoint) authentication, device authentication, endpoint authorization, and accessing resource.
+At each scenario, we have several entities that act as either clients or servers.
+
+Note that, the following commands has to be performed in order.
+
+### 1. Gateway or Endpoint Authentication ###
+
+#### Running the `isp` ####
+
+The Internet Service Provider (`isp`) provides authentication for domain `owner`.
+The `owner` has to authenticate his `gateway` by providing his credentials, his gateway address, and legitimate IP to the `isp`.
+When the authentication is successful, the `isp` will present attestation or approval of the `gateway` IP and identity.
+The `isp` instructing the smart contract to insert the `owner`'s `gateway` address to its trusted list.
 
 ```console
 vagrant@actor4:~$ cd ~/src
 vagrant@actor4:~$ npm run isp
 ```
 
-This will run the ISP authentication server.
-Next we will run the domain owner code to connect to this server.
+This will run the `isp` authentication server.
+Next we will run the domain `owner` code to connect to this server.
 
-### 2. Running the Domain Owner ###
+#### Running the `owner` ####
 
-This command will simulate the domain owner authentication request to the ISP server.
-However, the domain owner also needs to store the authentication request in the blockcahin.
-The following command abstract both of those operations.
+This command will simulate the domain `owner` authentication request to the `isp` server.
+Behind the scene, the `owner` also needs to store the log of the authentication request in the blockcahin.
 
 ```console
 vagrant@actor2:~$ cd ~/src
 vagrant@actor2:~$ npm run owner
 ```
 
-When everything is okay, you will notice a log in the console indicating the authentication is successful.
+When everything is okay, you will notice a log in the console indicating the gateway authentication is successful.
 
-### 3. Running the Vendor ###
+### 2. Device Authentication ###
 
-The vendor server provides the authentication for IoT devices that he manufactured.
-The vendor has to validate the authenticity of the devices by performing the public-key signaturing and encryption, secret key encryption, device fingerprinting, or mac authentication.
-When the authentication is success, the vendor will instruct the smart contract to insert the device's address to its trusted list.
+#### Running the `vendor` ####
+
+The `vendor` provides the authentication for IoT `device` that he manufactured.
+Specifically, the `vendor` has to validate the authenticity of the `device` by performing one of the followings.
+
+1. PKSIG, the ECDSA signature using the device private key.
+2. SKSIG, the HMAC signature using the device pre-shared secret key.
+3. Fingerprint, hash the secret parts of the device.
+4. MAC, provide the MAC address as identity.
+
+When the authentication is success, the `vendor` will instruct the smart contract to insert the `device`'s address to its trusted list.
 
 ```console
 vagrant@actor6:~$ cd ~/src
 vagrant@actor6:~$ npm run vendor
 ```
 
-This will run the vendor REST API server.
-The server will wait for device authentication requsts from the gateway.
+This will run the `vendor` authentication server.
+The server will wait for `device` authentication requsts from the `gateway`.
 
-### 4. Running the Gateway ###
+#### Running the `gateway` ####
 
-The gateway will relay the authentication payload form the device to the vendor.
+The `gateway` will relay the authentication payload form the `device` to the `vendor`.
 However, it will also anchor the payload to the blockchain.
-So, the following command will abstract both actions.
 
 ```console
 vagrant@actor5:~$ cd ~/src
 vagrant@actor5:~$ npm run gateway
 ```
 
-This will run the gateway REST API server and wait for the IoT device to send the authentication payload to the server.
+This will run the `gateway` server and wait for the IoT `device` to send the authentication payload to the server.
 
-### 5. Running the Device ###
+#### Running the `device` ####
 
-We will perform all of the available authentication options in the device.
-Mainly, the public-key signaturing and encryption, secret key encryption, device fingerprinting, and mac authentication.
+We will perform all of the available authentication options in the `device`.
+Mainly, the public-key signature, symmetric key signature, device fingerprinting, and mac authentication.
 
-The following command will send authentication payload to the gateway.
-The gateway then will relay the payload to the vendor after posting it in the blockchain.
+The following command will send authentication payload to the `gateway`.
 
 ```console
 vagrant@actor3:~$ cd ~/src
-vagrant@actor3:~$ npm run device-pke # for public key scheme
-vagrant@actor3:~$ npm run device-ske # for symmetric key scheme
+vagrant@actor3:~$ npm run device-pksig # for public key signature
+vagrant@actor3:~$ npm run device-sksig # for symmetric key scheme
 vagrant@actor3:~$ npm run device-fingerprint # for device fingerprinting
 vagrant@actor3:~$ npm run device-mac # for mac address authentication
 ```
 
-When everything is okay, you will notice a log in the console indicating the authentication is successful.
+When everything is okay, you will notice a log in the console indicating the device authentication is successful.
 
-- - - -
+### 3. Endpoint Authorization and Accessing Resource ###
 
-## Endpoint Authorization ##
+#### Running the `service` ####
 
-- - - -
+After the `gateway` and `device` completes their authentications, we can continue to grant endpoint access to other entities.
+In this example, the `owner` allow IoT `service` to access his domain through the `gateway`.
+Therefore, the `gateway` will act as an authorization server while the `service` will request for access to the `gateway`.
+Then, the `service` constructs a secure channel with the `gateway` before accessing the resource.
+Once the channel is established, it can begin request for resource using encrypted requests and responses.
 
-## Accessing Authorization ##
+```console
+vagrant@actor7:~$ cd ~/src
+vagrant@actor7:~$ npm run service
+```
 
-- - - -
-
-## Revocation ##
-
-- - - -
-
-## Benchmarking ##
-
-We also provide several benchmarking scenario to assess the performance of our proposed framework.
-You can go [here]() to follow the instructions to run the benchmark.
+When everything is okay, you will notice a log in the console indicating the endpoint authorization is successful.
+You can also see the generated secret key for accesing resource.
+Finally, the resource response from the gateway will also displayed in the console.
 
 ## Known Issues ##
 
@@ -178,6 +187,9 @@ vagrant@actor1:~$ ping actor1.local
 vagrant@actor2:~$ ping actor2.local
 vagrant@actor3:~$ ping actor3.local
 vagrant@actor4:~$ ping actor4.local
+vagrant@actor5:~$ ping actor5.local
+vagrant@actor6:~$ ping actor6.local
+vagrant@actor7:~$ ping actor7.local
 ```
 
 After that try to ping one another, this should solves the issues.

@@ -10,7 +10,7 @@ We have several benchmarking scenarios.
 2. Benchmark the client side of our access control scheme. More details are available [here]().
 3. Stress test our authentication and authorization servers. More details are available [here]().
 
-**Note**: We will use the VM to measure the benchmark specificed in the [Vagrant file]().
+**Note**: We will use the VM to measure the benchmark specificed in the [Vagrantfile]().
 All of the instructions here are assuming to use the same VM configuration.
 Furthermore, our code can also be run directly without VM.
 However, you need adjust your prompt yourself as it may show different prompt as the one in this example.

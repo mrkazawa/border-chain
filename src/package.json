@@ -1,6 +1,6 @@
 {
-  "name": "nemesis",
-  "version": "0.1.0",
+  "name": "border-chain",
+  "version": "v2",
   "description": "IoT domain access control using Ethereum smart contract",
   "main": "",
   "scripts": {
