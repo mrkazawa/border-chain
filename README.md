@@ -1,11 +1,11 @@
 # BorderChain #
 
-This repository is the implementation from our paper "BorderChain: Blockchain-Based Access Control Framework for the Internet of Things Endpoint," which is published [here]().
+This repository is implementing our paper "BorderChain: Blockchain-Based Access Control Framework for the Internet of Things Endpoint," which is published [here](https://ieeexplore.ieee.org/document/9309027).
 
 ## Installation ##
 
 You need `vagrant` and `virtualbox` for this project.
-So install them first if you do not have it yet in your machine.
+So install them first if you do not have them yet on your machine.
 You can download them [here](https://www.vagrantup.com/downloads.html) and [here](https://www.virtualbox.org/wiki/Downloads).
 All of the required software and tools have been included in the `Vagrantfile.`
 It will be installed during the `vagrant up` using shell provisioning scripts in the `./shell` directory.
@@ -53,14 +53,14 @@ foo@ubuntu:~$ vagrant destroy -f # to completely delete VM
 
 We need a trusted mediator called `admin` to bootstrap our environment.
 This entity exists only for development purposes and should not be available in the production case.
-The roles of `admin` are as follows.
+The roles of the `admin` are as follows.
 
 - First, we use it as the governor of our blockchain.
 The `admin` will run the Ethereum network and distribute the contract ABI to all IoT entities in our environment, which are the blockchain nodes.
-The `admin` also seed money to the participant blockchain address.
+The `admin` also seeds money to the participant blockchain address.
 
 - Second, we use `admin` as a broker to relay information between instances.
-For example, `owner` relays the `gateway`'s private key, public key, as well as its blockchain address to the `gateway`'s machine through `admin`.
+For example, the `owner` relays the `gateway`'s private key, public key, and its blockchain address to the `gateway`'s machine through `admin`.
 
 ```console
 vagrant@actor1:~$ cd ~/src
@@ -111,13 +111,13 @@ When everything is okay, you will notice a log in the console indicating the gat
 
 #### Running the `vendor` ####
 
-The `vendor` provides the authentication for IoT `device` that he manufactured.
+The `vendor` provides the authentication for the IoT `device` that he manufactured.
 Specifically, the `vendor` has to validate the `device` by performing one of the following.
 
-1. PKSIG, the ECDSA signature using the device private key.
+1. PKSIG, the ECDSA signature using the device's private key.
 2. SKSIG, the HMAC signature using the device pre-shared secret key.
 3. Fingerprint, hash the secret parts of the device.
-4. MAC, provides the MAC address as an identity.
+4. MAC, using the MAC address as an identity.
 
 When the authentication success, the `vendor` will instruct the smart contract to insert the `device`'s address to its trusted list.
 
@@ -131,7 +131,7 @@ The server will wait for `device` authentication requests from the `gateway`.
 
 #### Running the `gateway` ####
 
-The `gateway` will relay the authentication payload form the `device` to the `vendor`.
+The `gateway` will relay the authentication payload from the `device` to the `vendor`.
 However, it will also anchor the payload to the blockchain.
 
 ```console
@@ -146,7 +146,7 @@ This will run the `gateway` server and wait for the IoT `device` to send the aut
 We will perform all of the available authentication options in the `device`.
 Mainly, the public-key signature, symmetric key signature, device fingerprinting, and mac authentication.
 
-The following command will send authentication payload to the `gateway`.
+The following command will send the authentication payload to the `gateway`.
 
 ```console
 vagrant@actor3:~$ cd ~/src
@@ -163,10 +163,10 @@ When everything is okay, you will notice a log in the console indicating the dev
 #### Running the `service` ####
 
 After the `gateway` and `device` complete their authentications, we can continue to grant endpoint access to other entities.
-In this example, the `owner` allow IoT `service` to access his domain through the `gateway`.
+In this example, the `owner` allows IoT `service` to access his domain through the `gateway`.
 Therefore, the `gateway` will act as an authorization server while the `service` will request access to the `gateway`.
 The `service` constructs a secure channel with the `gateway` before accessing the resource.
-Once the channel is established, it can start requesting for a resource using encrypted messages.
+Once the channel is established, it can start asking resources using encrypted messages.
 
 ```console
 vagrant@actor7:~$ cd ~/src
